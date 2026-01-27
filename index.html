@@ -2,62 +2,61 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
+  <title>森のしずくゲーム - Tea Merry</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>森のしずくゲーム</title>
-
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="./style.css" />
 </head>
 
 <body>
   <div id="game-wrapper">
 
-    <!-- 上：森ゲージ＋スコア（あなたのCSSにある .top-bar / .forest-gauge を使う） -->
+    <!-- 上部：スコア＋ゲージ -->
     <div class="top-bar">
-      <div class="forest-gauge" aria-label="森のゲージ">
-        <div class="fill" id="gaugeFill"></div>
-        <div class="shine"></div>
-        <!-- シルエット画像（必要なら assets にしてもOK） -->
-        <img class="mask-img" alt=""
-          src="https://static.wixstatic.com/media/e0436a_e60dfc03c92c4eec8d50af83bd9cf87e~mv2.png">
-        <div class="gauge-score">
-          <span class="gauge-score-label">SCORE</span>
-          <span class="gauge-score-value" id="scoreValue">0</span>
+      <div class="forest-cap-wrap">
+        <img class="forest-cap"
+          src="https://static.wixstatic.com/media/e0436a_00ab0a0c244d48f794f62d6e51691c5e~mv2.png"
+          alt=""
+        />
+      </div>
+
+      <div class="score-row score-with-gauge">
+        <div class="score-text">
+          <span class="score-label">SCORE</span>
+          <span class="score-value" id="scoreLabel">0</span>
+        </div>
+
+        <div class="simple-gauge inside" aria-label="スコアゲージ">
+          <div class="simple-gauge-fill" id="scoreGaugeFill"></div>
+          <div class="gauge-text" id="scoreGaugeText">0</div>
         </div>
       </div>
     </div>
 
-    <!-- ゲーム枠 -->
+    <!-- ゲーム本体 -->
     <div class="game-area">
       <div class="game-frame">
 
-        <!-- 上：葉っぱ皿＋次雫（ここが巨大化を止める場所） -->
         <div class="preview-tray">
           <div class="leaf-wrapper" id="leafWrapper">
             <img class="leaf-plate" id="leafPlate"
-              src="https://static.wixstatic.com/media/e0436a_679cede63a034b18aceccd1775c79e57~mv2.png" />
+              src="https://static.wixstatic.com/media/e0436a_679cede63a034b18aceccd1775c79e57~mv2.png"
+              alt=""
+            />
           </div>
-
-          <!-- 次の雫（画像は仮。game.jsで差し替えOK） -->
-          <img class="preview-droplet" id="previewDroplet"
-            src="assets/images/hoippu_S.webp" alt="次の雫" />
+          <img class="preview-droplet" id="previewDroplet" alt="preview droplet" />
         </div>
 
-        <!-- 落下エリア -->
         <div class="play-area">
           <canvas id="gameCanvas"></canvas>
-
-          <!-- 下：丸太（あなたのCSSは div.cup-line を背景画像で出す方式） -->
           <div class="cup-line" id="cupLine"></div>
           <div class="cup-shadow"></div>
         </div>
 
-        <!-- 下：ボタン -->
         <div class="bottom-ui">
           <button class="help-btn" id="helpBtn">ゲーム説明</button>
           <button class="reset-btn" id="resetBtn">はじめから</button>
         </div>
 
-        <!-- ゲームオーバー -->
         <div class="overlay" id="gameOverOverlay">
           <div class="overlay-card">
             <div class="overlay-title">しずくが いっぱいになりました</div>
@@ -69,16 +68,9 @@
       </div>
     </div>
 
-    <div class="title">森 の しずくゲーム</div>
-    <div class="subtitle">
-      おさらの上のしずくを左右にそっと動かして、タイミングを見て落としてみてね。
-    </div>
-    <div class="hint">
-      同じしずくどうしがぶつかると、ひとつ大きく育ちます。<br/>
-      しずくがお皿の上までいっぱいになったらおしまいです。
-    </div>
   </div>
 
-  <script src="game.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.20.0/matter.min.js"></script>
+  <script src="./game.js"></script>
 </body>
 </html>

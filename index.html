@@ -1,76 +1,116 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8" />
-  <title>森のしずくゲーム - Tea Merry</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="./style.css" />
-</head>
+/* =========================================================
+   🐜 アリ（DOMだけ・見た目）
+========================================================= */
+const ANT_CFG = {
+  maxAnts: 2,                 // 通常 1〜2匹
+  spawnIntervalMin: 2500,
+  spawnIntervalMax: 5200,
+  speedMin: 14,               // px/sec（遅め）
+  speedMax: 26,
+  yJitter: 2,                 // 上下のゆらぎ
+  // ★あなたのアリ画像URLに差し替えてね
+  texL: "https://static.wixstatic.com/media/XXXX_left.png",
+  texR: "https://static.wixstatic.com/media/XXXX_right.png",
+};
 
-<body>
-  <div id="game-wrapper">
+let ants = [];
+let antSpawnTimer = null;
+let antsRAF = 0;
+let antsLastT = 0;
 
-    <!-- 上部：スコア＋ゲージ -->
-    <div class="top-bar">
-      <div class="forest-cap-wrap">
-        <img class="forest-cap"
-          src="https://static.wixstatic.com/media/e0436a_00ab0a0c244d48f794f62d6e51691c5e~mv2.png"
-          alt=""
-        />
-      </div>
+function clearAnts(){
+  if (!antsLayer) return;
+  ants.forEach(a => a.el.remove());
+  ants = [];
+  if (antSpawnTimer) { clearTimeout(antSpawnTimer); antSpawnTimer = null; }
+  if (antsRAF) { cancelAnimationFrame(antsRAF); antsRAF = 0; }
+  antsLastT = 0;
+}
 
-      <div class="score-row score-with-gauge">
-        <div class="score-text">
-          <span class="score-label">SCORE</span>
-          <span class="score-value" id="scoreLabel">0</span>
-        </div>
+function scheduleAntSpawn(){
+  if (gameOver) return;
+  if (!antsLayer) return;
 
-        <div class="simple-gauge inside" aria-label="スコアゲージ">
-          <div class="simple-gauge-fill" id="scoreGaugeFill"></div>
-          <div class="gauge-text" id="scoreGaugeText">0</div>
-        </div>
-      </div>
-    </div>
+  const delay = ANT_CFG.spawnIntervalMin + Math.random() * (ANT_CFG.spawnIntervalMax - ANT_CFG.spawnIntervalMin);
+  antSpawnTimer = setTimeout(() => {
+    if (!gameOver && ants.length < ANT_CFG.maxAnts) spawnAnt();
+    scheduleAntSpawn();
+  }, delay);
+}
 
-    <!-- ゲーム本体 -->
-    <div class="game-area">
-      <div class="game-frame">
+function spawnAnt(){
+  if (!antsLayer) return;
 
-        <div class="preview-tray">
-          <div class="leaf-wrapper" id="leafWrapper">
-            <img class="leaf-plate" id="leafPlate"
-              src="https://static.wixstatic.com/media/e0436a_679cede63a034b18aceccd1775c79e57~mv2.png"
-              alt=""
-            />
-          </div>
-          <img class="preview-droplet" id="previewDroplet" alt="preview droplet" />
-        </div>
+  // 左→右 or 右→左
+  const fromLeft = Math.random() < 0.5;
+  const layerRect = antsLayer.getBoundingClientRect();
 
-        <div class="play-area">
-          <canvas id="gameCanvas"></canvas>
-          <div class="cup-line" id="cupLine"></div>
-          <div class="cup-shadow"></div>
-        </div>
+  const el = document.createElement("div");
+  el.className = "ant";
 
-        <div class="bottom-ui">
-          <button class="help-btn" id="helpBtn">ゲーム説明</button>
-          <button class="reset-btn" id="resetBtn">はじめから</button>
-        </div>
+  const img = document.createElement("img");
+  img.alt = "ant";
+  img.src = fromLeft ? ANT_CFG.texR : ANT_CFG.texL; // 進行方向に合わせる
+  el.appendChild(img);
 
-        <div class="overlay" id="gameOverOverlay">
-          <div class="overlay-card">
-            <div class="overlay-title">しずくが いっぱいになりました</div>
-            <div class="overlay-score" id="finalScoreText"></div>
-            <button class="overlay-btn" id="overlayRestartBtn">もう一度 あそぶ</button>
-          </div>
-        </div>
+  // 初期位置（レイヤー外から）
+  const w = 22;
+  const startX = fromLeft ? -w : (layerRect.width + w);
+  el.style.transform = `translateX(${startX}px)`;
 
-      </div>
-    </div>
+  // 微妙な高さのゆらぎ
+  const y = (Math.random() * 2 - 1) * ANT_CFG.yJitter;
+  el.style.bottom = `${10 + y}px`;
 
-  </div>
+  antsLayer.appendChild(el);
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.20.0/matter.min.js"></script>
-  <script src="./game.js"></script>
-</body>
-</html>
+  const speed = ANT_CFG.speedMin + Math.random() * (ANT_CFG.speedMax - ANT_CFG.speedMin);
+
+  ants.push({
+    el,
+    img,
+    x: startX,
+    fromLeft,
+    speed,
+    bobSeed: Math.random() * 1000
+  });
+
+  startAntsLoop();
+}
+
+function startAntsLoop(){
+  if (antsRAF) return;
+  antsLastT = performance.now();
+  antsRAF = requestAnimationFrame(updateAnts);
+}
+
+function updateAnts(t){
+  antsRAF = 0;
+  if (gameOver) return;
+  if (!antsLayer) return;
+
+  const dt = Math.min(0.05, (t - antsLastT) / 1000);
+  antsLastT = t;
+
+  const layerW = antsLayer.getBoundingClientRect().width;
+
+  // 更新
+  ants.forEach(a => {
+    const dir = a.fromLeft ? 1 : -1;
+    a.x += dir * a.speed * dt;
+
+    // ちょい“てくてく”感（上下に1pxくらい）
+    const bob = Math.sin((t * 0.01) + a.bobSeed) * 1.0;
+    a.el.style.transform = `translateX(${a.x.toFixed(2)}px) translateY(${bob.toFixed(2)}px)`;
+  });
+
+  // 画面外に出たら消す
+  ants = ants.filter(a => {
+    const out = a.fromLeft ? (a.x > layerW + 30) : (a.x < -30);
+    if (out) a.el.remove();
+    return !out;
+  });
+
+  // まだ生存がいれば継続
+  if (ants.length > 0) antsRAF = requestAnimationFrame(updateAnts);
+}

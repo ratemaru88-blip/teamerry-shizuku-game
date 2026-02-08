@@ -1091,6 +1091,10 @@
   }
 
   /* ===== GameOver ===== */
+  // topSensorに“居続けた”判定用
+const topTouchMap = new Map(); // body.id -> firstTouchTime
+const TOP_TOUCH_MS = 650;      // この時間以上センサー内にいたらアウト
+
   function triggerGameOver(){
     if (gameOver) return;
     gameOver = true;
@@ -1118,9 +1122,17 @@
       if (bodyA.isDroplet && bodyB.isStatic && !bodyB.isTopSensor && !bodyB.isSensor) handleBounce(bodyA, now);
       else if (bodyB.isDroplet && bodyA.isStatic && !bodyA.isTopSensor && !bodyA.isSensor) handleBounce(bodyB, now);
 
-      // topSensor
-      if (bodyA.isTopSensor && bodyB.isDroplet) { triggerGameOver(); return; }
-      if (bodyB.isTopSensor && bodyA.isDroplet) { triggerGameOver(); return; }
+      // topSensor：一瞬触れただけでは死なない（一定時間“居続けたら”死ぬ）
+if ((bodyA.isTopSensor && bodyB.isDroplet) || (bodyB.isTopSensor && bodyA.isDroplet)) {
+  const d = bodyA.isDroplet ? bodyA : bodyB;
+
+  // ミノムシが掴んでる雫は無視（運搬で上を通るため）
+  if (d.isGrabbedByMino) {
+    // 何もしない
+  } else {
+    if (!topTouchMap.has(d.id)) topTouchMap.set(d.id, performance.now());
+  }
+}
 
       // droplet merge
       if (bodyA.isDroplet && bodyB.isDroplet) mergeDroplets(bodyA, bodyB);
@@ -1169,6 +1181,24 @@
 
     updateMinosAI();
     cleanupMinos();
+    // topSensor：一定時間“居続けた”雫があればゲームオーバー
+const now = performance.now();
+for (const [id, t0] of topTouchMap) {
+  const d = Array.from(droplets).find(x => x.id === id);
+  if (!d) { topTouchMap.delete(id); continue; }
+
+  // ミノムシが掴み始めたら無視に切り替え
+  if (d.isGrabbedByMino) { topTouchMap.delete(id); continue; }
+
+  // 速度が遅い＝詰まってる（積もってる）ときだけ死ぬ
+  const slow = d.speed < 0.8;
+
+  if (slow && (now - t0) >= TOP_TOUCH_MS) {
+    triggerGameOver();
+    break;
+  }
+}
+
   });
 
   /* ===== 入力 ===== */
@@ -1403,6 +1433,15 @@
 
   if (resetBtn) resetBtn.addEventListener("click", resetGame);
   if (overlayRestartBtn) overlayRestartBtn.addEventListener("click", resetGame);
+
+  document.getElementById("btn-help").addEventListener("click", () => {
+  window.open(
+    "https://static.wixstatic.com/media/e0436a_5eca3cb13f9947bd86a0ae6bc1553895~mv2.jpg",
+    "_blank",
+    "noopener"
+  );
+});
+
 
   // 初期化
   resetGame();

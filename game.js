@@ -1434,15 +1434,7 @@ for (const [id, t0] of topTouchMap) {
   if (resetBtn) resetBtn.addEventListener("click", resetGame);
   if (overlayRestartBtn) overlayRestartBtn.addEventListener("click", resetGame);
 
-  document.getElementById("btn-help").addEventListener("click", () => {
-  window.open(
-    "https://static.wixstatic.com/media/e0436a_5eca3cb13f9947bd86a0ae6bc1553895~mv2.jpg",
-    "_blank",
-    "noopener"
-  );
-});
-
-
+ 
   // 初期化
   resetGame();
 })();

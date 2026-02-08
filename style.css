@@ -47,37 +47,56 @@ body {
 /* SCOREの箱は今回使わない（ゲージ内数字のみ） */
 .score-text{ display:none !important; }
 
+/* ===== ゲージを3層構造にする ===== */
 .simple-gauge.inside{
   position: relative;
   width: 100%;
   height: 35px;
   border-radius: 999px;
-  background: rgba(255,255,255,0.35);
   overflow: hidden;
-  margin: 0 !important;
+
+  background: rgba(255,255,255,0.35);
+  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.15);
 }
 
+/* 1) 最背面：緑ゲージ */
 .simple-gauge-fill{
-  height: 100%;
+  position: absolute;
+  inset: 0;
   width: 0%;
-  border-radius: 999px;
+  height: 100%;
+  border-radius: 0;
+  z-index: 1;
   background: linear-gradient(90deg,#248d5a 0%, #137a43 40%, #1fa05d 70%, #0e6a3f 100%);
   transition: width 180ms ease;
 }
-
+/* 2) 中間：白い森シルエット */
+.gauge-forest{
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.gauge-forest-img{
+  position: absolute;
+  left: 0;
+  top: -18px;     /* ←見た目に合わせて微調整OK */
+  width: 100%;
+  height: auto;
+  opacity: 0.95;  /* 白が強すぎる時は 0.85 くらいに */
+}
+/* 3) 最前面：SCORE文字＋数字（左寄せ） */
 .gauge-text{
   position: absolute;
   inset: 0;
+  z-index: 3;
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  padding-left: 30px;
-  font-size: 0.80rem;
-  font-weight: 700;
-  color: rgba(5, 0, 0, 0.95);
-  text-shadow: none;
-  pointer-events: none;
-}
+  gap: 10px;
+  padding-left: 14px;
+  pointer-events: none;}
 
 .forest-cap-wrap{
   position: absolute;
@@ -313,4 +332,135 @@ body {
   color: #5a4633;
   font-size: 0.75rem;
   cursor: pointer;
+}
+/* =======================
+   🐜 アリ（DOMレイヤー）
+======================= */
+.ants-layer{
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 64px;           /* cup-line と同じ基準 */
+  height: 46px;           /* cup-line の高さに合わせる */
+  pointer-events: none;
+  z-index: 6;             /* cup-line(5)より上 */
+}
+
+.ant{
+  position: absolute;
+  bottom: 14px;           /* cup-line の上に乗る高さ（微調整ポイント） */
+  width: 22px;
+  height: 22px;
+  will-change: transform;
+  opacity: 0.95;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.20));
+}
+
+.ant img{
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
+/* ===== スコアHUDを最前面に ===== */
+.top-bar{
+  position: relative;
+  z-index: 9999;  /* 最前面 */
+}
+
+/* 白い森シルエットは“下”へ */
+.forest-cap-wrap{
+  position: absolute;
+  left: 0px;
+  top: -18px;
+  width: 100%;
+  height: 60px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 20;      /* ←低くする */
+}
+/* スコアゲージ（文字含む）は“上”へ */
+.score-with-gauge{
+  position: relative;
+  z-index: 1;      /* ←forest-capより上 */
+}
+/* ゲージ自体をクッキリ見せる */
+.simple-gauge.inside{
+  background: rgba(255,255,255,0.55);
+  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.15);
+}
+
+/* SCORE＋数字（字体を見やすく） */
+.gauge-text{
+  justify-content: flex-start;      /* ←左寄せ */
+  gap: 10px;
+  padding-left: 0;              /* 既存の30pxを打ち消す */
+  font-family: system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Yu Gothic", sans-serif;
+  font-variant-numeric: tabular-nums; /* 数字の幅を揃えて見やすく */
+  letter-spacing: 0.04em;
+  color: rgba(20, 12, 6, 0.98);
+  text-shadow: 0 1px 0 rgba(255,255,255,0.65);
+}
+
+.gauge-label{
+  font-size: 0.78rem;
+  font-weight: 800;
+  opacity: 0.85;
+}
+
+.gauge-num{
+  font-size: 1.05rem;
+  font-weight: 900;
+}
+/* HUD最前面を安定させる（最後に置いて上書き） */
+.top-bar{ position: relative; z-index: 9999; }
+.score-with-gauge{ position: relative; z-index: 10; }
+
+/* ゲージ内は 文字(3) > 白森(2) > 緑ゲージ(1) */
+.simple-gauge.inside{ position: relative; overflow: hidden; }
+.simple-gauge-fill{ position:absolute; inset:0; z-index:1; }
+.gauge-forest{ position:absolute; inset:0; z-index:2; pointer-events:none; }
+.gauge-text{ position:absolute; inset:0; z-index:3; justify-content:flex-start; padding-left:14px; }
+/* 念のため：旧スコア行を完全に無効化 */
+.score-row .score-text,
+.score-row > .score-text,
+.score-text,
+#scoreLabel {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+.mino-fx-layer{
+  position:absolute;
+  left:0; right:0; top:0; bottom:0;
+  pointer-events:none;
+  z-index: 7; /* cup-line(5)より上、UIより下でもOK */
+}
+
+.mino-stars{
+  position:absolute;
+  width: 56px;
+  height: 56px;
+  transform: translate(-50%, -50%);
+  opacity: 0.95;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2));
+}
+
+.mino-stars .star{
+  position:absolute;
+  left:50%; top:50%;
+  width: 16px; height: 16px;
+  transform: translate(-50%, -50%);
+  object-fit: contain;
+}
+
+@keyframes starOrbit{
+  0%   { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+.mino-stars{
+  animation: starOrbit 1.2s linear infinite;
 }

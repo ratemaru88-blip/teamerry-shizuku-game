@@ -11,14 +11,19 @@
   const finalScoreText    = document.getElementById("finalScoreText");
   const overlayRestartBtn = document.getElementById("overlayRestartBtn");
   const helpBtn           = document.getElementById("helpBtn");
+  const antsLayer         = document.getElementById("antsLayer");
 
-  const scoreLabel     = document.getElementById("scoreLabel");
+  const scoreLabel     = document.getElementById("scoreLabel");       // （残っててもOK）
   const scoreGaugeFill = document.getElementById("scoreGaugeFill");
   const scoreGaugeText = document.getElementById("scoreGaugeText");
 
+  if (!canvas) {
+    console.error("gameCanvas が見つかりません");
+    return;
+  }
+
   if (helpBtn) {
     helpBtn.addEventListener("click", () => {
-      // Wix内の説明ページへ差し替えてOK
       window.open("https://example.com/game-help", "_self");
     });
   }
@@ -74,6 +79,7 @@
 
   let rimFloorA = null;
   let rimFloorB = null;
+  let topSensor = null;
   let cupRimYWorld = worldHeight - 90;
 
   function buildBoundsOnce(){
@@ -117,7 +123,7 @@
       { isStatic: true, render: { visible: false } }
     );
 
-    const topSensor = Bodies.rectangle(
+    topSensor = Bodies.rectangle(
       worldWidth / 2,
       worldHeight * 0.12,
       worldWidth * 0.82,
@@ -155,18 +161,30 @@
   requestAnimationFrame(() => syncCupRimToVisual());
   window.addEventListener("resize", () => requestAnimationFrame(() => syncCupRimToVisual()));
 
-  /* ===== ゲージ ===== */
-  const STAGE_CLEAR_SCORE = 2500;
+  /* ===== スコア＆ゲージ ===== */
+  let score = 0;
+
+  // “渋め” 調整
+  const STAGE_SCORES = [15, 35, 70, 120];
+  const STAGE_CLEAR_SCORE = 3800;
 
   function updateScoreGauge(){
-    if (!scoreGaugeFill) return;
-    const p = Math.max(0, Math.min(1, score / STAGE_CLEAR_SCORE));
-    scoreGaugeFill.style.width = `${(p * 100).toFixed(1)}%`;
+    if (scoreLabel) scoreLabel.textContent = String(score);
+
+    if (scoreGaugeFill) {
+      const p = Math.max(0, Math.min(1, score / STAGE_CLEAR_SCORE));
+      scoreGaugeFill.style.width = `${(p * 100).toFixed(1)}%`;
+    }
     if (scoreGaugeText) scoreGaugeText.textContent = String(score);
   }
 
+  function addScoreForStage(stageIndex, bonus = 0) {
+    const base = STAGE_SCORES[Math.min(stageIndex, STAGE_SCORES.length - 1)] || 0;
+    score += base + bonus;
+    updateScoreGauge();
+  }
+
   /* ===== ゲーム状態 ===== */
-  let score         = 0;
   let nextCharIndex = 0;
   let canDrop       = true;
   let gameOver      = false;
@@ -178,7 +196,7 @@
   let tiltRAF = 0;
 
   function updateMoveTilt() {
-    leafWrapperEl.style.transform = `translateX(-50%) rotate(${moveTiltDeg.toFixed(2)}deg)`;
+    if (leafWrapperEl) leafWrapperEl.style.transform = `translateX(-50%) rotate(${moveTiltDeg.toFixed(2)}deg)`;
     tiltRAF = 0;
   }
 
@@ -196,34 +214,24 @@
     );
   }
 
-  /* ===== 半径/スコア ===== */
+  /* ===== 半径/合体段階 ===== */
   const BASE_SIZE = worldWidth;
   const STAGE_RADIUS = [
     BASE_SIZE * 0.055,
     BASE_SIZE * 0.085,
     BASE_SIZE * 0.12
   ];
-
-  const STAGE_SCORES = [30, 60, 120, 200];
-
-  function addScoreForStage(stageIndex, bonus = 0) {
-    const base = STAGE_SCORES[Math.min(stageIndex, STAGE_SCORES.length - 1)] || 0;
-    score += base + bonus;
-    if (scoreLabel) scoreLabel.textContent = String(score);
-    updateScoreGauge();
-  }
-
   const NUM_STAGES = 3;
   const STAGE_KEYS = ["small", "medium", "large"];
   const VISUAL_SCALE = 1.0;
-  const STAGE_VISUAL_MULTIPLIER = { 0: 1.00, 1: 1.00, 2: 1.00 };
 
   /* ===== 画像 ===== */
   const LEAF_OBS_TEX = "https://static.wixstatic.com/media/e0436a_3390aa571a914ab086b2db00a8c76def~mv2.png";
   const BEE_TEX_L = "https://static.wixstatic.com/media/e0436a_750ead96817a40618e8cf9aa30a07192~mv2.png";
   const BEE_TEX_R = "https://static.wixstatic.com/media/e0436a_810f0f4624bb4807bdc0a97652bf3d18~mv2.webp";
-  const MINO_TEX_NORMAL = "https://static.wixstatic.com/media/e0436a_eae6e145b21342e3a2a038a1de9e82fe~mv2.png";
-  const MINO_TEX_FAIL   = "https://static.wixstatic.com/media/e0436a_624372739670477d8110ef4a57511f57~mv2.png";
+
+  const MINO_TEX_NORMAL = "https://static.wixstatic.com/media/e0436a_bd2aa3d132364f9d83a9eb4bdabce505~mv2.webp";
+  const MINO_TEX_FAIL   = "https://static.wixstatic.com/media/e0436a_1c7df1f465164bdeba93ac98ce62b9aa~mv2.webp";
 
   const dropletTypes = [
     {
@@ -253,42 +261,6 @@
       },
       dropSmall: "https://static.wixstatic.com/media/e0436a_1efc366c7a8845c293c63cc4a602652e~mv2.webp"
     },
-    {
-      name: "雫 チョコパ",
-      sprites: {
-        small:  "https://static.wixstatic.com/media/e0436a_9080353f505c400bb7ee922c63b08ef6~mv2.webp",
-        medium: "https://static.wixstatic.com/media/e0436a_3e13f607965f4370968b9595ced36eef~mv2.webp",
-        large:  "https://static.wixstatic.com/media/e0436a_4713d4466eef4b1ab15e82de87434b6a~mv2.webp"
-      },
-      dropSmall: "https://static.wixstatic.com/media/e0436a_1a530cff0bc34b598da9d047ca1c90a8~mv2.webp"
-    },
-    {
-      name: "雫 ホイップ",
-      sprites: {
-        small:  "https://static.wixstatic.com/media/e0436a_c6f9df734a1c4a6a98a7b90c8bdb04e6~mv2.webp",
-        medium: "https://static.wixstatic.com/media/e0436a_7ed9ba0bf98440fd9c95f92d67de1b16~mv2.webp",
-        large:  "https://static.wixstatic.com/media/e0436a_81fef1472a3644b096cb765c8daca042~mv2.webp"
-      },
-      dropSmall: "https://static.wixstatic.com/media/e0436a_70085ee9c7a644a49113a96489051b07~mv2.webp"
-    },
-    {
-      name: "雫 ちゃちゃじい",
-      sprites: {
-        small:  "https://static.wixstatic.com/media/e0436a_547fbaf6d7fe4cf4ab9d4de1ad8036d0~mv2.webp",
-        medium: "https://static.wixstatic.com/media/e0436a_ba743232606c42628240df2202d77239~mv2.webp",
-        large:  "https://static.wixstatic.com/media/e0436a_aa495d4a1aa640bd85673109e01eee2c~mv2.webp"
-      },
-      dropSmall: "https://static.wixstatic.com/media/e0436a_394527199653474da346c29410aa3d2c~mv2.webp"
-    },
-    {
-      name: "雫 ミント",
-      sprites: {
-        small:  "https://static.wixstatic.com/media/e0436a_0082a7c95f514756b31e3d51176de94e~mv2.webp",
-        medium: "https://static.wixstatic.com/media/e0436a_4465406692174916b178857c6c5b4c28~mv2.webp",
-        large:  "https://static.wixstatic.com/media/e0436a_5dc7da1c55fc447ba06a93c770b98a5b~mv2.webp"
-      },
-      dropSmall: "https://static.wixstatic.com/media/e0436a_0c6c34cf923b402d8223b54f61f1c7fa~mv2.webp"
-    },
   ];
 
   /* ===== 効果音 ===== */
@@ -298,14 +270,11 @@
       new Audio("https://static.wixstatic.com/mp3/e0436a_0aa91b4db66743a6802a9ddb15de5b13.mp3"),
       new Audio("https://static.wixstatic.com/mp3/e0436a_53429b721be5486999461954b945f362.mp3"),
     ],
-    minoAppear: [ new Audio("https://static.wixstatic.com/mp3/e0436a_01f90882f58c4f5ea1d3d0f48b5e30a1.wav") ],
     buzz: [ new Audio("https://static.wixstatic.com/mp3/e0436a_9fe5aba4787c4830b15ae80c6dd5a7d9.mp3") ],
     beeBreak: [ new Audio("https://static.wixstatic.com/mp3/e0436a_a22b94fdb260457d8be3479466d11421.mp3") ],
   };
-
   sounds.drop.forEach(a => a.volume = 0.35);
   sounds.merge.forEach(a => a.volume = 0.45);
-  sounds.minoAppear.forEach(a => a.volume = 0.55);
   sounds.buzz.forEach(a => { a.volume = 0.22; a.loop = true; });
   sounds.beeBreak.forEach(a => a.volume = 0.70);
 
@@ -315,12 +284,21 @@
     try { a.currentTime = 0; a.play(); } catch (e) {}
   }
 
+  // ===== ミノムシ降下SE =====
+  const MINO_DOWN_SFX_URL = "https://static.wixstatic.com/mp3/e0436a_01f90882f58c4f5ea1d3d0f48b5e30a1.wav";
+  const minoDownSE = new Audio(MINO_DOWN_SFX_URL);
+  minoDownSE.loop = true;
+  minoDownSE.volume = 0.28;
+
   let audioUnlocked = false;
   function unlockAudioOnce() {
     if (audioUnlocked) return;
     audioUnlocked = true;
+
     const all = [];
     Object.values(sounds).forEach(arr => arr.forEach(a => all.push(a)));
+    all.push(minoDownSE);
+
     all.forEach(a => {
       try {
         const prevVol = a.volume;
@@ -334,7 +312,15 @@
     });
   }
 
-  /* ===== 画像実寸キャッシュ（雫sprite用） ===== */
+  function playMinoDownSE(){
+    if (!audioUnlocked) return;
+    try { minoDownSE.currentTime = 0; minoDownSE.play(); } catch(e){}
+  }
+  function stopMinoDownSE(){
+    try { minoDownSE.pause(); minoDownSE.currentTime = 0; } catch(e){}
+  }
+
+  /* ===== Spriteスケール補正 ===== */
   const droplets = new Set();
   const textureSizeCache = new Map();
 
@@ -371,9 +357,8 @@
     const diameter = body.circleRadius * 2;
     const baseScale = (diameter / baseW) * VISUAL_SCALE;
 
-    const stageMul = STAGE_VISUAL_MULTIPLIER[body.stage] || 1.0;
-    sprite.xScale = baseScale * stageMul;
-    sprite.yScale = baseScale * stageMul;
+    sprite.xScale = baseScale;
+    sprite.yScale = baseScale;
 
     body.baseSpriteScale = sprite.xScale;
   }
@@ -386,7 +371,6 @@
     sprite.yScale = s;
   }
 
-  /* ===== ぷよっと演出 ===== */
   function squish(body, power = 1.1, duration = 220) {
     if (!body || body.isStatic || body.isSquishing) return;
     const sprite = body.render && body.render.sprite;
@@ -450,8 +434,6 @@
       frictionAir: OBSTACLE_LEAF.frictionAir,
       render: {
         fillStyle: "transparent",
-        strokeStyle: "rgba(0,0,0,0)",
-        lineWidth: 0,
         sprite: { texture: LEAF_OBS_TEX, xScale: 1, yScale: 1 }
       }
     });
@@ -549,11 +531,12 @@
     startBeeBuzz(bee);
   }
 
+  // ★ここが壊れてたので完全に修正済み
   function maybeScheduleBee() {
     const now = performance.now();
     if (now < beeCooldownUntil) return;
 
-    const hasLarge = [...droplets].some(d => d.isDroplet && d.stage === 2);
+    const hasLarge = Array.from(droplets).some(d => d && d.isDroplet && d.stage === 2);
     if (!hasLarge) return;
     if (Math.random() > 0.35) return;
 
@@ -610,7 +593,7 @@
   }
 
   /* =========================================================
-     🐛 ミノムシ
+     🐛 ミノムシ（落下→KO→復帰→上へ）
   ========================================================= */
   const minos = new Set();
   let minoTimer = null;
@@ -625,13 +608,11 @@
     delayMin: 1100,
     delayMax: 2400,
     cooldownMs: 14000,
-    dropFailRate: 0.20
+    dropFailRate: 0.22
   };
 
   function spawnMino() {
     if (gameOver) return;
-
-    playRandom(sounds.minoAppear);
 
     const x = worldWidth * (0.35 + Math.random() * 0.30);
     const y = -70;
@@ -646,6 +627,9 @@
     mino.state = "down";
     mino.grab = null;
     mino.carryRope = null;
+
+    // ★常に sensor（雫/落ち葉に乗らない）
+    mino.isSensor = true;
 
     mino._inertiaOrig = mino.inertia;
     Body.setInertia(mino, Infinity);
@@ -675,6 +659,9 @@
     mino.rope = rope;
     mino.ropeAnchor = anchor;
     World.add(world, rope);
+
+    // ★降下音
+    playMinoDownSE();
   }
 
   function maybeScheduleMino() {
@@ -695,11 +682,12 @@
   }
 
   function pickMinoTarget() {
-    const leaves = [...obstacleLeaves].filter(b => b && !b.isStatic && !b.isGrabbedByMino);
+    const leaves = Array.from(obstacleLeaves).filter(b => b && !b.isStatic && !b.isGrabbedByMino);
     if (leaves.length > 0) return leaves[Math.floor(Math.random() * leaves.length)];
 
-    const ds = [...droplets].filter(d => d && d.isDroplet && !d.isGrabbedByMino);
+    const ds = Array.from(droplets).filter(d => d && d.isDroplet && !d.isGrabbedByMino);
     if (ds.length > 0) return ds[Math.floor(Math.random() * ds.length)];
+
     return null;
   }
 
@@ -709,9 +697,9 @@
 
     target._densityOrig = target.density;
     target._sensorOrig = target.isSensor;
+
     try { Body.setDensity(target, Math.max(0.0002, target.density * 0.35)); } catch(e) {}
     target.isSensor = false;
-
     target.isGrabbedByMino = true;
 
     const carry = Constraint.create({
@@ -753,13 +741,8 @@
         mino.render.sprite.texture = MINO_TEX_FAIL;
         setSpriteScaleByPx(mino, MINO_CFG.sizePx);
       }
-      mino.isSensor = false;
-      Body.setDensity(mino, 0.00035);
-      mino.friction = 0.02;
-      mino.frictionAir = 0.02;
-      mino.restitution = 0.25;
-
-      if (mino._inertiaOrig) Body.setInertia(mino, mino._inertiaOrig);
+      // 失敗でも sensor のまま落ちる（山に乗らない）
+      mino.isSensor = true;
     } else {
       mino.isSensor = true;
       Body.setInertia(mino, Infinity);
@@ -768,7 +751,8 @@
 
   function cleanupMinos() {
     minos.forEach(m => {
-      if (m.position.y > worldHeight + 220) {
+      if (m.position.y > worldHeight + 240) {
+        stopMinoDownSE();
         if (m.rope) World.remove(world, m.rope);
         if (m.carryRope) World.remove(world, m.carryRope);
         World.remove(world, m);
@@ -784,6 +768,7 @@
     const SWAY_PX = 8;
 
     minos.forEach(m => {
+      // rope sway
       if (m.rope && m.ropeAnchor) {
         if (m.position.y >= SWAY_START_Y) {
           const t = (now - (m.spawnAt || now)) * 0.001;
@@ -800,6 +785,9 @@
           Body.setVelocity(m, { x: 0, y: 0 });
           m.state = "pause";
           m.pauseUntil = now + 520 + Math.random() * 380;
+
+          // ★降下が終わったら音止め
+          //stopMinoDownSE();
         } else {
           Body.setVelocity(m, { x: 0, y: MINO_CFG.downSpeed });
         }
@@ -833,11 +821,16 @@
             const g = m.grab;
             detachMino(m, true);
 
+            // 掴んでたものを落とす
             if (g && g.position) {
               Body.setVelocity(g, { x: (Math.random() - 0.5) * 1.0, y: MINO_CFG.fallSpeed });
             }
 
+            // ロープを外して落下
+            if (m.rope) { World.remove(world, m.rope); m.rope = null; }
+
             m.state = "fail";
+            m.isSensor = true;
             Body.setVelocity(m, { x: (Math.random() - 0.5) * 0.6, y: MINO_CFG.fallSpeed });
           } else {
             m.state = "carry";
@@ -857,6 +850,8 @@
         Body.setVelocity(m, { x: 0, y: MINO_CFG.upSpeed });
 
         if (m.position.y < -130) {
+          stopMinoDownSE();
+          // 成功：掴んでたものは回収（消す）
           if (m.grab) {
             const g = m.grab;
             detachMino(m, false);
@@ -871,6 +866,57 @@
           World.remove(world, m);
           minos.delete(m);
         }
+        return;
+      }
+
+      if (m.state === "fail") {
+        // ★雫・落ち葉をすり抜けて落下
+        m.isSensor = true;
+
+        Body.setVelocity(m, {
+          x: clamp(m.velocity.x, -1.2, 1.2),
+          y: Math.max(m.velocity.y, MINO_CFG.fallSpeed)
+        });
+
+        // 画面外で掃除
+        if (m.position.y > worldHeight + 240) {
+          World.remove(world, m);
+          minos.delete(m);
+        }
+        return;
+      }
+
+      if (m.state === "ko") {
+        // 気絶中固定
+        Body.setVelocity(m, { x: 0, y: 0 });
+        Body.setAngularVelocity(m, 0);
+
+        if (now >= (m.koUntil || 0)) {
+          m.state = "liftAfterKo";
+
+          Body.setStatic(m, false);
+          Body.setAngle(m, 0);
+
+          if (m.render && m.render.sprite) {
+            m.render.sprite.texture = MINO_TEX_NORMAL;
+            setSpriteScaleByPx(m, MINO_CFG.sizePx);
+          }
+
+          Body.setVelocity(m, { x: 0, y: -2.2 });
+          squish(m, 1.25, 220);
+        }
+        return;
+      }
+
+      if (m.state === "liftAfterKo") {
+        Body.setVelocity(m, { x: 0, y: -2.1 });
+
+        if (m.position.y < -130) {
+          stopMinoDownSE(); // ★追加
+          World.remove(world, m);
+          minos.delete(m);
+        }
+        return;
       }
     });
   }
@@ -899,19 +945,19 @@
   /* ===== 次の雫 ===== */
   function pickNextDroplet() {
     nextCharIndex = Math.floor(Math.random() * dropletTypes.length);
-    // 「次の雫」UIは廃止しているため、見た目更新は不要
   }
 
   /* ===== 皿の上の雫 ===== */
   function setHoldingDroplet(charIndex) {
     const type = dropletTypes[charIndex];
-
     const tex =
       (type && type.sprites && type.sprites.small) ||
       (type && type.dropSmall) ||
       "";
 
     holding = { charIndex, stage: 0, radius: STAGE_RADIUS[0], texture: tex };
+
+    if (!previewDropletEl) return;
 
     if (!tex) {
       previewDropletEl.removeAttribute("src");
@@ -928,14 +974,12 @@
   /* ===== 雫生成 ===== */
   function createDropletBody({ charIndex, stage, x, y, radius, texture, isTear }) {
     const body = Bodies.circle(x, y, radius, {
-      restitution: 0.15,
+      restitution: 0.08,
       friction: 0.01,
       frictionAir: 0.03,
       density: 0.0012,
       render: {
         fillStyle: "transparent",
-        strokeStyle: "rgba(0,0,0,0)",
-        lineWidth: 0,
         sprite: texture ? { texture: texture, xScale: 1, yScale: 1 } : undefined
       }
     });
@@ -1012,8 +1056,8 @@
       });
 
       Body.setVelocity(newBody, {
-        x: vx * 0.25,
-        y: Math.min(-6, vy * 0.15 - 4)
+        x: vx * 0.20,
+        y: Math.min(-3.4, vy * 0.10 - 2.2)
       });
 
       squish(newBody, 1.25, 220);
@@ -1052,6 +1096,7 @@
     gameOver = true;
     canDrop = false;
     stopAllTimers();
+    stopMinoDownSE();
 
     if (finalScoreText) finalScoreText.textContent = `SCORE：${score}`;
     if (gameOverOverlay) gameOverOverlay.classList.add("visible");
@@ -1069,30 +1114,18 @@
       if (bodyA.isDroplet && bodyA.isTear) makeRoundIfTear(bodyA);
       if (bodyB.isDroplet && bodyB.isTear) makeRoundIfTear(bodyB);
 
-      // 静的物体バウンド（床・壁のみ）＋ミノ掴み中は除外
-      if (bodyA.isDroplet && bodyB.isStatic) {
-        if (!bodyA.isGrabbedByMino && !bodyB.isTopSensor && !bodyB.isSensor) handleBounce(bodyA, now);
-      } else if (bodyB.isDroplet && bodyA.isStatic) {
-        if (!bodyB.isGrabbedByMino && !bodyA.isTopSensor && !bodyA.isSensor) handleBounce(bodyB, now);
-      }
+      // 静的物体バウンド（床・壁のみ）
+      if (bodyA.isDroplet && bodyB.isStatic && !bodyB.isTopSensor && !bodyB.isSensor) handleBounce(bodyA, now);
+      else if (bodyB.isDroplet && bodyA.isStatic && !bodyA.isTopSensor && !bodyA.isSensor) handleBounce(bodyB, now);
 
-      // topSensor: ミノ掴み中はGameOver判定しない
-      if (bodyA.isTopSensor && bodyB.isDroplet) {
-        if (!bodyB.isGrabbedByMino) { triggerGameOver(); return; }
-      }
-      if (bodyB.isTopSensor && bodyA.isDroplet) {
-        if (!bodyA.isGrabbedByMino) { triggerGameOver(); return; }
-      }
+      // topSensor
+      if (bodyA.isTopSensor && bodyB.isDroplet) { triggerGameOver(); return; }
+      if (bodyB.isTopSensor && bodyA.isDroplet) { triggerGameOver(); return; }
 
-      // 掴まれてる雫がtopSensorに触れたときは何もしない
-      if ((bodyA.isTopSensor && bodyB.isDroplet && bodyB.isGrabbedByMino) ||
-          (bodyB.isTopSensor && bodyA.isDroplet && bodyA.isGrabbedByMino)) {
-        continue;
-      }
-
+      // droplet merge
       if (bodyA.isDroplet && bodyB.isDroplet) mergeDroplets(bodyA, bodyB);
 
-      // ハチ攻撃（大雫のみ）
+      // bee attack
       if ((bodyA.isBee && bodyB.isDroplet) || (bodyB.isBee && bodyA.isDroplet)) {
         const bee = bodyA.isBee ? bodyA : bodyB;
         const dro = bodyA.isDroplet ? bodyA : bodyB;
@@ -1103,6 +1136,21 @@
 
         bee.hasStung = true;
         breakLargeToMedium(dro);
+      }
+
+      // ★ミノムシがcup-line床に触れたらKO（failの時だけ）
+      if ((bodyA.isMino && bodyB.isCupRim) || (bodyB.isMino && bodyA.isCupRim)) {
+        const mino = bodyA.isMino ? bodyA : bodyB;
+        if (mino && mino.state === "fail") {
+          mino.state = "ko";
+          mino.koUntil = performance.now() + 2000;
+
+          mino.isSensor = true;
+          Body.setVelocity(mino, { x: 0, y: 0 });
+          Body.setAngularVelocity(mino, 0);
+          Body.setAngle(mino, 1.57);
+          Body.setStatic(mino, true);
+        }
       }
     }
   });
@@ -1136,8 +1184,8 @@
     plateX = Math.max(minX, Math.min(maxX, ratioX * worldWidth));
 
     const percent = (plateX / worldWidth) * 100;
-    leafWrapperEl.style.left = percent + "%";
-    previewDropletEl.style.left = percent + "%";
+    if (leafWrapperEl) leafWrapperEl.style.left = percent + "%";
+    if (previewDropletEl) previewDropletEl.style.left = percent + "%";
 
     const dx = plateX - prevX;
     const target = clamp(dx * 0.25, -2.5, 2.5);
@@ -1152,7 +1200,9 @@
     playLeafDropKick();
 
     dropFromPlate(holding.charIndex, plateX);
-    addScoreForStage(0);
+
+    // 落としただけ点（渋め）
+    addScoreForStage(0, -5);
 
     pickNextDroplet();
     setHoldingDroplet(nextCharIndex);
@@ -1171,14 +1221,146 @@
     dropCurrentDroplet();
   });
 
+  /* =========================================================
+     🐜 アリ（DOM：2コマ歩行）
+  ========================================================= */
+  const ANT_CFG = {
+    maxAnts: 2,
+    spawnIntervalMin: 2500,
+    spawnIntervalMax: 5200,
+    speedMin: 14,
+    speedMax: 26,
+    yJitter: 2,
+    texL: [
+      "https://static.wixstatic.com/media/e0436a_ba5c533006c943d2bb48e6209835bd54~mv2.png",
+      "https://static.wixstatic.com/media/e0436a_fbafd110f97c44c690d0079442b060c4~mv2.png"
+    ],
+    texR: [
+      "https://static.wixstatic.com/media/e0436a_1573066bada849c49f463c4e94c31e80~mv2.png",
+      "https://static.wixstatic.com/media/e0436a_9d8b26a5b7ad40c68669691dd0155141~mv2.png"
+    ],
+  };
+
+  let ants = [];
+  let antSpawnTimer = null;
+  let antsRAF = 0;
+  let antsLastT = 0;
+
+  function clearAnts(){
+    if (!antsLayer) return;
+    ants.forEach(a => a.el.remove());
+    ants = [];
+    if (antSpawnTimer) { clearTimeout(antSpawnTimer); antSpawnTimer = null; }
+    if (antsRAF) { cancelAnimationFrame(antsRAF); antsRAF = 0; }
+    antsLastT = 0;
+  }
+
+  function scheduleAntSpawn(){
+    if (gameOver) return;
+    if (!antsLayer) return;
+
+    const delay =
+      ANT_CFG.spawnIntervalMin +
+      Math.random() * (ANT_CFG.spawnIntervalMax - ANT_CFG.spawnIntervalMin);
+
+    antSpawnTimer = setTimeout(() => {
+      if (!gameOver && ants.length < ANT_CFG.maxAnts) spawnAnt();
+      scheduleAntSpawn();
+    }, delay);
+  }
+
+  function spawnAnt(){
+    if (!antsLayer) return;
+
+    const layerRect = antsLayer.getBoundingClientRect();
+    const fromLeft = Math.random() < 0.5;
+
+    const frames = fromLeft ? ANT_CFG.texR : ANT_CFG.texL;
+
+    const el = document.createElement("div");
+    el.className = "ant";
+
+    const img = document.createElement("img");
+    img.alt = "ant";
+    img.src = frames[0];
+    el.appendChild(img);
+
+    const w = 22;
+    const startX = fromLeft ? -w : (layerRect.width + w);
+
+    const y = (Math.random() * 2 - 1) * ANT_CFG.yJitter;
+    el.style.bottom = `${10 + y}px`;
+    el.style.transform = `translateX(${startX}px)`;
+
+    antsLayer.appendChild(el);
+
+    const speed = ANT_CFG.speedMin + Math.random() * (ANT_CFG.speedMax - ANT_CFG.speedMin);
+
+    ants.push({
+      el,
+      img,
+      x: startX,
+      fromLeft,
+      speed,
+      bobSeed: Math.random() * 1000,
+      frames,
+      frameIndex: 0,
+      nextFrameTime: performance.now() + 180 + Math.random() * 120
+    });
+
+    startAntsLoop();
+  }
+
+  function startAntsLoop(){
+    if (antsRAF) return;
+    antsLastT = performance.now();
+    antsRAF = requestAnimationFrame(updateAnts);
+  }
+
+  function updateAnts(t){
+    antsRAF = 0;
+    if (gameOver) return;
+    if (!antsLayer) return;
+
+    const dt = Math.min(0.05, (t - antsLastT) / 1000);
+    antsLastT = t;
+
+    const layerW = antsLayer.getBoundingClientRect().width;
+
+    ants.forEach(a => {
+      const dir = a.fromLeft ? 1 : -1;
+      a.x += dir * a.speed * dt;
+
+      if (t >= a.nextFrameTime) {
+        a.frameIndex = (a.frameIndex + 1) % a.frames.length;
+        a.img.src = a.frames[a.frameIndex];
+        a.nextFrameTime = t + 220 + Math.random() * 80;
+      }
+
+      // const bob = Math.sin((t * 0.01) + a.bobSeed) * 1.0;
+      a.el.style.transform = `translateX(${a.x.toFixed(2)}px)`;
+
+    });
+
+    ants = ants.filter(a => {
+      const out = a.fromLeft ? (a.x > layerW + 30) : (a.x < -30);
+      if (out) a.el.remove();
+      return !out;
+    });
+
+    if (ants.length > 0) antsRAF = requestAnimationFrame(updateAnts);
+  }
+
+  /* ===== リセット ===== */
   function resetGame() {
     gameOver = false;
     canDrop  = true;
 
+    stopMinoDownSE();
+
     if (gameOverOverlay) gameOverOverlay.classList.remove("visible");
 
     score = 0;
-    if (scoreLabel) scoreLabel.textContent = "0";
     updateScoreGauge();
 
     stopAllTimers();
@@ -1199,16 +1381,19 @@
     });
     minos.clear();
 
+    clearAnts();
+
     plateX = worldWidth / 2;
-    leafWrapperEl.style.left = "50%";
-    previewDropletEl.style.left = "50%";
+    if (leafWrapperEl) leafWrapperEl.style.left = "50%";
+    if (previewDropletEl) previewDropletEl.style.left = "50%";
     moveTiltDeg = 0;
-    leafWrapperEl.style.transform = "translateX(-50%) rotate(0deg)";
+    if (leafWrapperEl) leafWrapperEl.style.transform = "translateX(-50%) rotate(0deg)";
 
     pickNextDroplet();
     setHoldingDroplet(nextCharIndex);
 
     scheduleNextLeaf();
+    scheduleAntSpawn();
 
     beeCooldownUntil = performance.now() + 3500;
     minoCooldownUntil = performance.now() + 4500;
@@ -1216,8 +1401,8 @@
     requestAnimationFrame(()=>syncCupRimToVisual());
   }
 
-  resetBtn.addEventListener("click", resetGame);
-  overlayRestartBtn.addEventListener("click", resetGame);
+  if (resetBtn) resetBtn.addEventListener("click", resetGame);
+  if (overlayRestartBtn) overlayRestartBtn.addEventListener("click", resetGame);
 
   // 初期化
   resetGame();

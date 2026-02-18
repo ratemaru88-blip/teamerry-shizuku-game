@@ -50,18 +50,19 @@
         position:absolute;
         width:1px; height:1px;
         transform: translate(-50%,-50%);
-        animation: minoStarSpin 1.0s linear infinite;
         opacity: 0.95;
         filter: drop-shadow(0 1px 2px rgba(0,0,0,.15));
+        animation: minoStarPulse 0.9s ease-in-out infinite; /* ★回転しない */
       }
       .mino-stars img.star{
         position:absolute;
-        width:18px; height:18px;
+        width:54px; height:54px;
         transform: translate(-50%,-50%);
       }
-      @keyframes minoStarSpin{
-        from { transform: translate(-50%,-50%) rotate(0deg); }
-        to   { transform: translate(-50%,-50%) rotate(360deg); }
+      @keyframes minoStarPulse{
+       0%   { transform: translate(-50%,-50%) scale(0.98); opacity:0.85; }
+       50%  { transform: translate(-50%,-50%) scale(1.05); opacity:1.0; }
+       100% { transform: translate(-50%,-50%) scale(0.98); opacity:0.85; }
       }
     `;
     document.head.appendChild(st);
@@ -78,8 +79,8 @@
   const RIGHT_MARGIN = 26;
 
   // ===== ゲームオーバー判定（雫：上部に溜まりすぎ）=====
-  const DROPLET_GAMEOVER_Y = worldHeight * 0.28; // この高さより上に溜まると危険
-  const DROPLET_GAMEOVER_COUNT = 4;              // この個数以上でGAME OVER
+  const DROPLET_GAMEOVER_Y = worldHeight * 0.28;
+  const DROPLET_GAMEOVER_COUNT = 4;
 
   const engine = Engine.create();
   const world  = engine.world;
@@ -212,8 +213,6 @@
 
   /* ===== スコア＆ゲージ ===== */
   let score = 0;
-
-  // “渋め” 調整
   const STAGE_SCORES = [15, 35, 70, 120];
   const STAGE_CLEAR_SCORE = 3800;
 
@@ -381,10 +380,8 @@
     audioUnlocked = true;
     const all = [
       ...sounds.drop, ...sounds.merge, ...sounds.buzz, ...sounds.beeBreak,
-      // ミノムシSEもここに入れる（後で定義されるので関数内では参照しない）
     ];
     all.forEach(a => {
-      try { a.volume = a.volume ?? 0.3; } catch(e){}
       try { a.muted = true; a.play().then(()=>{ a.pause(); a.currentTime = 0; a.muted = false; }).catch(()=>{ a.muted = false; }); }
       catch(e){}
     });
@@ -393,7 +390,7 @@
   // ===== ミノムシ移動SE（降下〜上昇中）=====
   const MINO_DOWN_SFX_URL = "https://static.wixstatic.com/mp3/e0436a_01f90882f58c4f5ea1d3d0f48b5e30a1.wav";
   const minoDownSE = new Audio(MINO_DOWN_SFX_URL);
-  minoDownSE.loop = true;  // ✅移動中はループ
+  minoDownSE.loop = true;
   minoDownSE.volume = 0.28;
 
   function playMinoDownSE(){
@@ -710,24 +707,27 @@
     dropFailRate: 0.22
   };
 
+  // ===== ミノムシ救助演出（※constでOK：この後にしか発火しないようにしてある）=====
+  const RESCUE_ANT_SPEED = 120;
+  const RESCUE_ANT_POKE_DELAY = 260;
+  const RESCUE_WAKE_DELAY = 380;
+  const RESCUE_LADY_RATE = 0.18;
+
   // ★KO星エフェクト
   const minoStarsMap = new Map(); // mino.id -> { wrap }
   function createMinoStars(mino){
     if (!mino || minoStarsMap.has(mino.id)) return;
+
     const wrap = document.createElement("div");
     wrap.className = "mino-stars";
-    // 3つくらい星
-    const angles = [0, 130, 240];
-    angles.forEach((deg, i) => {
-      const img = document.createElement("img");
-      img.className = "star";
-      img.src = MINO_STAR_TEX;
-      const r = 22;
-      const rad = (deg * Math.PI) / 180;
-      img.style.left = `${Math.cos(rad) * r}px`;
-      img.style.top  = `${Math.sin(rad) * r}px`;
-      wrap.appendChild(img);
-    });
+
+    const img = document.createElement("img");
+    img.className = "star";
+    img.src = MINO_STAR_TEX;
+    img.style.left = `0px`;
+    img.style.top  = `0px`;
+
+    wrap.appendChild(img);
     minoFxLayer.appendChild(wrap);
     minoStarsMap.set(mino.id, { wrap });
   }
@@ -793,7 +793,7 @@
     mino.ropeAnchor = anchor;
     World.add(world, rope);
 
-    playMinoDownSE(); // ✅降下開始で鳴らす
+    playMinoDownSE();
   }
 
   function maybeScheduleMino() {
@@ -893,6 +893,49 @@
     });
   }
 
+  /* ===== KO救助アリ（後でDOMの🧩と結合） ===== */
+  let rescueAnts = []; // KO救助専用アリ
+
+  function clearRescueAnts(minoId) {
+    rescueAnts = rescueAnts.filter(a => {
+      const keep = (minoId != null) ? (a.minoId !== minoId) : false;
+      if (!keep) {
+        try { a.el.remove(); } catch(e){}
+      }
+      return keep;
+    });
+  }
+
+  function tryRescueWake(mino, mode = "ants") {
+    if (!mino || mino.state !== "ko") return;
+    if (mino._rescueWaking) return;
+    mino._rescueWaking = true;
+
+    removeMinoStars(mino);
+
+    if (mino.render && mino.render.sprite) {
+      mino.render.sprite.texture = MINO_TEX_AWAKE;
+      setSpriteScaleByPx(mino, MINO_CFG.sizePx);
+    }
+
+    setTimeout(() => {
+      if (mino.render && mino.render.sprite) {
+        mino.render.sprite.texture = MINO_TEX_NORMAL;
+        setSpriteScaleByPx(mino, MINO_CFG.sizePx);
+      }
+
+      Body.setStatic(mino, false);
+      Body.setAngle(mino, 0);
+      mino.isSensor = true;
+
+      playMinoDownSE();
+      Body.setVelocity(mino, { x: 0, y: -2.2 });
+      mino.state = "liftAfterKo";
+    }, RESCUE_WAKE_DELAY);
+
+    clearRescueAnts(mino.id);
+  }
+
   function updateMinosAI() {
     if (gameOver) return;
 
@@ -900,8 +943,13 @@
     const SWAY_PX = 8;
 
     minos.forEach(m => {
-      // 星位置更新（KO中）
-      if (m.state === "ko") updateMinoStarsPosition(m);
+      if (m.state === "ko") {
+        stopMinoDownSE();
+        Body.setVelocity(m, { x: 0, y: 0 });
+        Body.setAngularVelocity(m, 0);
+        updateMinoStarsPosition(m);
+        return; // 起こされるまで待機
+      }
 
       if (m.rope && m.ropeAnchor) {
         if (m.position.y >= SWAY_START_Y) {
@@ -913,11 +961,10 @@
         }
       }
 
-      // ---- DOWN（降下）----
       if (m.state === "down") {
-        playMinoDownSE(); // ✅降下中鳴らす（保険）
+        playMinoDownSE();
         if (m.position.y >= SWAY_START_Y) {
-          stopMinoDownSE(); // ✅止まるので止める
+          stopMinoDownSE();
           Body.setPosition(m, { x: m.position.x, y: SWAY_START_Y });
           Body.setVelocity(m, { x: 0, y: 0 });
           m.state = "pause";
@@ -928,7 +975,6 @@
         return;
       }
 
-      // ---- PAUSE（止まる）----
       if (m.state === "pause") {
         stopMinoDownSE();
         Body.setVelocity(m, { x: 0, y: 0 });
@@ -936,12 +982,11 @@
           const t = pickMinoTarget();
           if (t) attachToMino(m, t);
           m.state = "lift";
-          playMinoDownSE(); // ✅上昇開始で鳴らす（ここが重要！）
+          playMinoDownSE();
         }
         return;
       }
 
-      // ---- LIFT（上昇）----
       if (m.state === "lift") {
         playMinoDownSE();
         Body.setAngle(m, 0);
@@ -957,7 +1002,7 @@
           const fail = Math.random() < MINO_CFG.dropFailRate && !!m.grab;
 
           if (fail) {
-            stopMinoDownSE(); // ✅失敗落下は鳴らさない
+            stopMinoDownSE();
             const g = m.grab;
             detachMino(m, true);
 
@@ -972,13 +1017,12 @@
             Body.setVelocity(m, { x: (Math.random() - 0.5) * 0.6, y: MINO_CFG.fallSpeed });
           } else {
             m.state = "carry";
-            playMinoDownSE(); // ✅carryも鳴らす（保険）
+            playMinoDownSE();
           }
         }
         return;
       }
 
-      // ---- CARRY（回収して上昇）----
       if (m.state === "carry") {
         playMinoDownSE();
         Body.setAngle(m, 0);
@@ -991,7 +1035,6 @@
         Body.setVelocity(m, { x: 0, y: MINO_CFG.upSpeed });
 
         if (m.position.y < -130) {
-          // 成功：掴んでたものは回収（消す）
           if (m.grab) {
             const g = m.grab;
             detachMino(m, false);
@@ -1003,7 +1046,7 @@
             }
           }
 
-          stopMinoDownSE(); // ✅消える直前で必ず止める
+          stopMinoDownSE();
           removeMinoStars(m);
           if (m.rope) World.remove(world, m.rope);
           World.remove(world, m);
@@ -1012,7 +1055,6 @@
         return;
       }
 
-      // ---- FAIL（失敗落下）----
       if (m.state === "fail") {
         stopMinoDownSE();
         m.isSensor = true;
@@ -1030,31 +1072,6 @@
         return;
       }
 
-      // ---- KO（cup-lineで倒れる）----
-      if (m.state === "ko") {
-        stopMinoDownSE();
-        Body.setVelocity(m, { x: 0, y: 0 });
-        Body.setAngularVelocity(m, 0);
-
-        if (now >= (m.koUntil || 0)) {
-          // 復帰：上がって消える
-          m.state = "liftAfterKo";
-          Body.setStatic(m, false);
-          Body.setAngle(m, 0);
-
-          if (m.render && m.render.sprite) {
-            m.render.sprite.texture = MINO_TEX_NORMAL;
-            setSpriteScaleByPx(m, MINO_CFG.sizePx);
-          }
-
-          playMinoDownSE(); // ✅復帰上昇でも鳴らす
-          Body.setVelocity(m, { x: 0, y: -2.2 });
-          squish(m, 1.25, 220);
-        }
-        return;
-      }
-
-      // ---- liftAfterKo（復帰上昇）----
       if (m.state === "liftAfterKo") {
         playMinoDownSE();
         Body.setVelocity(m, { x: 0, y: -2.1 });
@@ -1241,7 +1258,233 @@
     if (gameOverOverlay) gameOverOverlay.classList.add("visible");
   }
 
-  /* ===== 衝突判定 ===== */
+  /* =========================================================
+     🐜 アリ（DOM：2コマ歩行）
+  ========================================================= */
+  const ANT_CFG = {
+    maxAnts: 2,
+    spawnIntervalMin: 2500,
+    spawnIntervalMax: 5200,
+    speedMin: 14,
+    speedMax: 26,
+    yJitter: 0,
+    texL: [
+      "https://static.wixstatic.com/media/e0436a_ba5c533006c943d2bb48e6209835bd54~mv2.png",
+      "https://static.wixstatic.com/media/e0436a_fbafd110f97c44c690d0079442b060c4~mv2.png"
+    ],
+    texR: [
+      "https://static.wixstatic.com/media/e0436a_1573066bada849c49f463c4e94c31e80~mv2.png",
+      "https://static.wixstatic.com/media/e0436a_9d8b26a5b7ad40c68669691dd0155141~mv2.png"
+    ],
+  };
+
+  let ants = [];
+  let antSpawnTimer = null;
+  let antsRAF = 0;
+  let antsLastT = 0;
+
+  function clearAnts() {
+    if (!antsLayer) return;
+    ants.forEach(a => a.el.remove());
+    ants = [];
+    if (antSpawnTimer) { clearTimeout(antSpawnTimer); antSpawnTimer = null; }
+    if (antsRAF) { cancelAnimationFrame(antsRAF); antsRAF = 0; }
+    antsLastT = 0;
+
+    // KO救助アリも全消し
+    rescueAnts.forEach(a => { try { a.el.remove(); } catch(e){} });
+    rescueAnts = [];
+  }
+
+  function scheduleAntSpawn() {
+    if (gameOver) return;
+    if (!antsLayer) return;
+
+    const delay =
+      ANT_CFG.spawnIntervalMin +
+      Math.random() * (ANT_CFG.spawnIntervalMax - ANT_CFG.spawnIntervalMin);
+
+    antSpawnTimer = setTimeout(() => {
+      if (!gameOver && ants.length < ANT_CFG.maxAnts) spawnAnt();
+      scheduleAntSpawn();
+    }, delay);
+  }
+
+  function spawnAnt() {
+    if (!antsLayer) return;
+
+    const layerRect = antsLayer.getBoundingClientRect();
+    const fromLeft = Math.random() < 0.5;
+    const frames = fromLeft ? ANT_CFG.texR : ANT_CFG.texL;
+
+    const el = document.createElement("div");
+    el.className = "ant";
+
+    const img = document.createElement("img");
+    img.alt = "ant";
+    img.src = frames[0];
+    el.appendChild(img);
+
+    const w = 22;
+    const startX = fromLeft ? -w : (layerRect.width + w);
+
+    el.style.bottom = `10px`;
+    el.style.transform = `translateX(${startX}px)`;
+
+    antsLayer.appendChild(el);
+
+    const speed = ANT_CFG.speedMin + Math.random() * (ANT_CFG.speedMax - ANT_CFG.speedMin);
+
+    ants.push({
+      el,
+      img,
+      x: startX,
+      fromLeft,
+      speed,
+      frames,
+      frameIndex: 0,
+      nextFrameTime: performance.now() + 180 + Math.random() * 120
+    });
+
+    startAntsLoop();
+  }
+
+  function spawnRescueAnt(mino, fromLeft) {
+    if (!antsLayer || !mino) return;
+
+    const layerRect = antsLayer.getBoundingClientRect();
+    const frames = fromLeft ? ANT_CFG.texR : ANT_CFG.texL;
+
+    const el = document.createElement("div");
+    el.className = "ant rescue-ant";
+
+    const img = document.createElement("img");
+    img.alt = "ant";
+    img.src = frames[0];
+    el.appendChild(img);
+
+    const w = 22;
+    const startX = fromLeft ? -w : (layerRect.width + w);
+
+    el.style.bottom = `10px`;
+    el.style.transform = `translateX(${startX}px)`;
+
+    antsLayer.appendChild(el);
+
+    const targetScreen = worldToScreen(mino.position.x, cupRimYWorld);
+    const targetX = targetScreen.sx - layerRect.left;
+
+    rescueAnts.push({
+      el,
+      img,
+      x: startX,
+      fromLeft,
+      speed: RESCUE_ANT_SPEED,
+      frames,
+      frameIndex: 0,
+      nextFrameTime: performance.now() + 120,
+      targetX,
+      arrived: false,
+      pokeAt: 0,
+      minoId: mino.id,
+    });
+
+    startAntsLoop();
+  }
+
+  function startAntsLoop() {
+    if (antsRAF) return;
+    antsLastT = performance.now();
+    antsRAF = requestAnimationFrame(updateAnts);
+  }
+
+  function updateAnts(t) {
+    antsRAF = 0;
+    if (gameOver) return;
+    if (!antsLayer) return;
+
+    const dt = Math.min(0.05, (t - antsLastT) / 1000);
+    antsLastT = t;
+
+    const layerW = antsLayer.getBoundingClientRect().width;
+
+    // 通常アリ
+    ants.forEach(a => {
+      const dir = a.fromLeft ? 1 : -1;
+      a.x += dir * a.speed * dt;
+
+      if (t >= a.nextFrameTime) {
+        a.frameIndex = (a.frameIndex + 1) % a.frames.length;
+        a.img.src = a.frames[a.frameIndex];
+        a.nextFrameTime = t + 220 + Math.random() * 80;
+      }
+
+      a.el.style.transform = `translateX(${a.x.toFixed(2)}px)`;
+    });
+
+    ants = ants.filter(a => {
+      const out = a.fromLeft ? (a.x > layerW + 30) : (a.x < -30);
+      if (out) a.el.remove();
+      return !out;
+    });
+
+    // KO救助アリ
+    rescueAnts.forEach(a => {
+      const dir = a.fromLeft ? 1 : -1;
+      a.x += dir * a.speed * dt;
+
+      if (t >= a.nextFrameTime) {
+        a.frameIndex = (a.frameIndex + 1) % a.frames.length;
+        a.img.src = a.frames[a.frameIndex];
+        a.nextFrameTime = t + 120;
+      }
+
+      if (!a.arrived) {
+        const dist = Math.abs(a.x - a.targetX);
+        if (dist < 12) {
+          a.arrived = true;
+          a.pokeAt = t + RESCUE_ANT_POKE_DELAY;
+        }
+      }
+
+      a.el.style.transform = `translateX(${a.x.toFixed(2)}px)`;
+    });
+
+    // つつき完了 → 起こす
+    if (rescueAnts.length > 0) {
+      const byMino = new Map();
+      rescueAnts.forEach(a => {
+        if (!byMino.has(a.minoId)) byMino.set(a.minoId, []);
+        byMino.get(a.minoId).push(a);
+      });
+
+      byMino.forEach((arr, minoId) => {
+        const allArrived = arr.every(a => a.arrived);
+        const allPoke = arr.every(a => a.arrived && t >= a.pokeAt);
+
+        if (allArrived && allPoke) {
+          const targetMino = Array.from(minos).find(m => m.id === minoId);
+          if (targetMino) tryRescueWake(targetMino, "ants");
+        }
+      });
+    }
+
+    // ★通常アリ or 救助アリが残ってるなら回し続ける
+    if (ants.length > 0 || rescueAnts.length > 0) {
+      antsRAF = requestAnimationFrame(updateAnts);
+    }
+  }
+
+  /* ===== ミノムシ救助：レディー（見た目は後で） ===== */
+  function maybeLadyRescue(mino){
+    if (!mino || mino.state !== "ko") return;
+    if (Math.random() >= RESCUE_LADY_RATE) return;
+    setTimeout(() => {
+      tryRescueWake(mino, "lady");
+    }, 900);
+  }
+
+  /* ===== 涙型のSE（衝突時）と衝突処理 ===== */
   Events.on(engine, "collisionStart", (event) => {
     for (const pair of event.pairs) {
       const bodyA = pair.bodyA;
@@ -1284,23 +1527,19 @@
         const mino = bodyA.isMino ? bodyA : bodyB;
         if (mino && mino.state === "fail") {
           mino.state = "ko";
-          mino.koUntil = performance.now() + 4500;
+          mino._rescueWaking = false;
 
-          // cup-line上に固定
-          try { Body.setPosition(mino, { x: mino.position.x, y: cupRimYWorld - 8 }); } catch(e){}
-
-          stopMinoDownSE();
-          mino.isSensor = true;
-          Body.setVelocity(mino, { x: 0, y: 0 });
-          Body.setAngularVelocity(mino, 0);
-          Body.setAngle(mino, 1.57);
-          Body.setStatic(mino, true);
-
+          // 星を出す
           createMinoStars(mino);
           updateMinoStarsPosition(mino);
-          mino.needsHelp = true;
+
+          // 救助アリ（左右から）
+          spawnRescueAnt(mino, true);
+          spawnRescueAnt(mino, false);
+
+          // レア：ミノムシレディー（まずはロジックだけ）
+          maybeLadyRescue(mino);
         }
-        continue;
       }
     }
   });
@@ -1319,7 +1558,7 @@
   Events.on(engine, "beforeUpdate", () => {
     if (gameOver) return;
 
-    // ハチ：ふわふわ（必要なら削除OK）
+    // ハチ：ふわふわ
     bees.forEach(b => {
       const wobble = Math.sin(performance.now() * 0.003 + b.id) * 0.22;
       Body.setVelocity(b, { x: b.velocity.x, y: wobble });
@@ -1380,7 +1619,6 @@
     playLeafDropKick();
     dropFromPlate(holding.charIndex, plateX);
 
-    // 落としただけ点（渋め）
     addScoreForStage(0, -5);
 
     pickNextDroplet();
@@ -1399,131 +1637,6 @@
     setPlatePositionByClientX(e.clientX);
     dropCurrentDroplet();
   });
-
-  /* =========================================================
-     🐜 アリ（DOM：2コマ歩行）
-  ========================================================= */
-  const ANT_CFG = {
-    maxAnts: 2,
-    spawnIntervalMin: 2500,
-    spawnIntervalMax: 5200,
-    speedMin: 14,
-    speedMax: 26,
-    yJitter: 0,
-    texL: [
-      "https://static.wixstatic.com/media/e0436a_ba5c533006c943d2bb48e6209835bd54~mv2.png",
-      "https://static.wixstatic.com/media/e0436a_fbafd110f97c44c690d0079442b060c4~mv2.png"
-    ],
-    texR: [
-      "https://static.wixstatic.com/media/e0436a_1573066bada849c49f463c4e94c31e80~mv2.png",
-      "https://static.wixstatic.com/media/e0436a_9d8b26a5b7ad40c68669691dd0155141~mv2.png"
-    ],
-  };
-
-  let ants = [];
-  let antSpawnTimer = null;
-  let antsRAF = 0;
-  let antsLastT = 0;
-
-  function clearAnts() {
-    if (!antsLayer) return;
-    ants.forEach(a => a.el.remove());
-    ants = [];
-    if (antSpawnTimer) { clearTimeout(antSpawnTimer); antSpawnTimer = null; }
-    if (antsRAF) { cancelAnimationFrame(antsRAF); antsRAF = 0; }
-    antsLastT = 0;
-  }
-
-  function scheduleAntSpawn() {
-    if (gameOver) return;
-    if (!antsLayer) return;
-
-    const delay =
-      ANT_CFG.spawnIntervalMin +
-      Math.random() * (ANT_CFG.spawnIntervalMax - ANT_CFG.spawnIntervalMin);
-
-    antSpawnTimer = setTimeout(() => {
-      if (!gameOver && ants.length < ANT_CFG.maxAnts) spawnAnt();
-      scheduleAntSpawn();
-    }, delay);
-  }
-
-  function spawnAnt() {
-    if (!antsLayer) return;
-
-    const layerRect = antsLayer.getBoundingClientRect();
-    const fromLeft = Math.random() < 0.5;
-    const frames = fromLeft ? ANT_CFG.texR : ANT_CFG.texL;
-
-    const el = document.createElement("div");
-    el.className = "ant";
-
-    const img = document.createElement("img");
-    img.alt = "ant";
-    img.src = frames[0];
-    el.appendChild(img);
-
-    const w = 22;
-    const startX = fromLeft ? -w : (layerRect.width + w);
-
-    el.style.bottom = `10px`;
-    el.style.transform = `translateX(${startX}px)`;
-
-    antsLayer.appendChild(el);
-
-    const speed = ANT_CFG.speedMin + Math.random() * (ANT_CFG.speedMax - ANT_CFG.speedMin);
-
-    ants.push({
-      el,
-      img,
-      x: startX,
-      fromLeft,
-      speed,
-      frames,
-      frameIndex: 0,
-      nextFrameTime: performance.now() + 180 + Math.random() * 120
-    });
-
-    startAntsLoop();
-  }
-
-  function startAntsLoop() {
-    if (antsRAF) return;
-    antsLastT = performance.now();
-    antsRAF = requestAnimationFrame(updateAnts);
-  }
-
-  function updateAnts(t) {
-    antsRAF = 0;
-    if (gameOver) return;
-    if (!antsLayer) return;
-
-    const dt = Math.min(0.05, (t - antsLastT) / 1000);
-    antsLastT = t;
-
-    const layerW = antsLayer.getBoundingClientRect().width;
-
-    ants.forEach(a => {
-      const dir = a.fromLeft ? 1 : -1;
-      a.x += dir * a.speed * dt;
-
-      if (t >= a.nextFrameTime) {
-        a.frameIndex = (a.frameIndex + 1) % a.frames.length;
-        a.img.src = a.frames[a.frameIndex];
-        a.nextFrameTime = t + 220 + Math.random() * 80;
-      }
-
-      a.el.style.transform = `translateX(${a.x.toFixed(2)}px)`;
-    });
-
-    ants = ants.filter(a => {
-      const out = a.fromLeft ? (a.x > layerW + 30) : (a.x < -30);
-      if (out) a.el.remove();
-      return !out;
-    });
-
-    if (ants.length > 0) antsRAF = requestAnimationFrame(updateAnts);
-  }
 
   /* ===== リセット ===== */
   function resetGame() {

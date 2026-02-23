@@ -1,5 +1,11 @@
 (() => {
-  "use strict";
+ // ===== 応急：壊れた画像でもdrawImageで落ちない =====
+(() => {
+  const _draw = CanvasRenderingContext2D.prototype.drawImage;
+  CanvasRenderingContext2D.prototype.drawImage = function (...args) {
+    try { return _draw.apply(this, args); } catch (e) { /* ignore */ }
+  };
+})();
 
   /* =========================================================
      森のしずくゲーム（整理版・完全最新版）

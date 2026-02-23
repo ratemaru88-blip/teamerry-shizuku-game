@@ -48,7 +48,27 @@
   // 壁マージン（落下ラインの左右余白）
   const LEFT_MARGIN = 28;
   const RIGHT_MARGIN = 28;
+// ===== レイヤー安定化（style.cssは触らずJS注入）=====
+(function injectLayerCss(){
+  const id = "tm_layer_fix";
+  if (document.getElementById(id)) return;
+  const st = document.createElement("style");
+  st.id = id;
+  st.textContent = `
+    /* canvasは基準 */
+    #gameCanvas{ position: relative; z-index: 10; }
 
+    /* cup-lineは“板”だけど、ミノムシ/ハチを隠さないように少し後ろへ */
+    #cupLine{ position: absolute; z-index: 6; }
+
+    /* アリは板より前 */
+    #antsLayer{ position: absolute; z-index: 20; pointer-events:none; }
+
+    /* 星やFXはさらに前 */
+    #minoFxLayer{ position: absolute; z-index: 30; pointer-events:none; }
+  `;
+  document.head.appendChild(st);
+})();
   /* =========================================================
      ✅ 雫 7種類（保持必須）
   ========================================================= */
@@ -213,19 +233,20 @@
     } catch(e){}
   }
 
-  // ✅ 追加：ミノムシ KO（cup-lineで目を回す）時のSE
-  const MINO_RAKKA_URL = "https://static.wixstatic.com/mp3/e0436a_cdb3c62613f24a7fa4d77a8c5cf2dd9f.mp3";
-  const minoRakkaSE = new Audio(MINO_RAKKA_URL);
-  minoRakkaSE.loop = false;
-  minoRakkaSE.volume = 0.70;
+ // ★追加：ミノムシ失敗落下→cup-lineでKO時のSE（1回だけ）
+const MINO_RAKKA_SFX_URL = "https://static.wixstatic.com/mp3/e0436a_cdb3c62613f24a7fa4d77a8c5cf2dd9f.mp3";
+const minoRakkaSE = new Audio(MINO_RAKKA_SFX_URL);
+minoRakkaSE.loop = false;
+minoRakkaSE.volume = 0.70;
 
-  function playMinoRakkaOnce() {
-    if (!audioUnlocked) return;
-    try {
-      minoRakkaSE.currentTime = 0;
-      minoRakkaSE.play();
-    } catch(e){}
-  }
+function playMinoRakkaSE(){
+  if (!audioUnlocked) return;
+  try {
+    minoRakkaSE.pause();
+    minoRakkaSE.currentTime = 0;
+    minoRakkaSE.play().catch(()=>{});
+  } catch(e){}
+}
   function stopMinoRakka() {
     try { minoRakkaSE.pause(); minoRakkaSE.currentTime = 0; } catch(e){}
   }
@@ -1027,24 +1048,25 @@
   }
 
   function updateMinoStarsPosition(mino) {
-    if (!mino || !mino._starsEl || !canvas) return;
+  if (!mino || !minoStarsMap || !minoStarsMap.has(mino.id)) return;
 
-    const rect = canvas.getBoundingClientRect();
-    const sx = rect.left;
-    const sy = rect.top;
-    const scaleX = rect.width / worldWidth;
-    const scaleY = rect.height / worldHeight;
+  const item = minoStarsMap.get(mino.id);
+  if (!item || !item.el) return;
 
-    const px = sx + mino.position.x * scaleX;
-    const py = sy + mino.position.y * scaleY;
+  const canvasRect = canvas.getBoundingClientRect();
+  const fxRect = minoFxLayer.getBoundingClientRect();
 
-    // starsはcup-line上で回して見せたいので少し上
-    const x = px - 28;
-    const y = py - 66;
+  // canvas内のworld座標 → 画面座標
+  const sx = (mino.position.x / worldWidth) * canvasRect.width + canvasRect.left;
+  const sy = (mino.position.y / worldHeight) * canvasRect.height + canvasRect.top;
 
-    mino._starsEl.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
-  }
+  // FXレイヤー内のローカル座標に変換
+  const localX = sx - fxRect.left;
+  const localY = sy - fxRect.top;
 
+  item.el.style.left = `${localX}px`;
+  item.el.style.top  = `${localY - 34}px`; // 頭の上に少し
+}
   function spawnMino() {
     if (gameOver) return;
 
@@ -1190,28 +1212,53 @@
         return;
       }
 
-      // fail（cup-lineに当たったらcollisionStartでKOへ）
-      if (m.state === "fail") {
-        stopMinoDownSE();
-        // 落ちてる間はMatter任せ
-        return;
-      }
+      // ミノムシがcup-line床に触れたらKO（failの時だけ）
+if ((bodyA.isMino && bodyB.isCupRim) || (bodyB.isMino && bodyA.isCupRim)) {
+  const mino = bodyA.isMino ? bodyA : bodyB;
 
-      // ko（倒れて星ぐるぐる：その場固定）
-      if (m.state === "ko") {
-        stopMinoDownSE();
-        Body.setVelocity(m, { x: 0, y: 0 });
-        Body.setAngle(m, 0);
-        return;
-      }
+  if (mino && mino.state === "fail") {
+    mino.state = "ko";
+    mino._rescueWaking = false;
 
-      // liftAfterKo（起きて上昇）
-      if (m.state === "liftAfterKo") {
-        playMinoDownSE();
-        Body.setAngle(m, 0);
-        Body.setVelocity(m, { x: 0, y: MINO_CFG.upSpeed });
-        return;
-      }
+    // ★KO時SE（1回だけ）
+    if (!mino._rakkaPlayed) {
+      mino._rakkaPlayed = false; // ★KO SE 二重鳴り防止
+      playMinoRakkaSE();
+    }
+
+    // ロープ系が残ってるなら外す（沈み/引っ張り事故防止）
+    if (mino.rope) { World.remove(world, mino.rope); mino.rope = null; }
+    if (mino.carryRope) { World.remove(world, mino.carryRope); mino.carryRope = null; }
+
+    // KO姿勢：cupRimの少し上で固定＆横倒し
+    const rimY = cupRim.position.y;
+    Body.setPosition(mino, { x: mino.position.x, y: rimY - 12 });
+    Body.setVelocity(mino, { x: 0, y: 0 });
+    Body.setAngularVelocity(mino, 0);
+
+    const dir = (mino.position.x < worldWidth * 0.5) ? -1 : 1;
+    Body.setAngle(mino, dir * (Math.PI / 2));  // 横倒し
+
+    Body.setStatic(mino, true);
+    mino.isSensor = true;
+
+    // KO画像に（fail画像を流用するなら不要だけど、明示して安定化）
+    if (mino.render && mino.render.sprite) {
+      mino.render.sprite.texture = MINO_TEX_FAIL;
+    }
+
+    // 星を出す（FX layer）
+    createMinoStars(mino);
+    updateMinoStarsPosition(mino);
+
+    // 救助アリ（左右から）
+    spawnRescueAnt(mino, true);
+    spawnRescueAnt(mino, false);
+
+    // レア：ミノムシレディー（必要なら）
+    maybeLadyRescue(mino);
+  }
+}
     });
   }
 

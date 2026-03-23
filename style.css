@@ -289,7 +289,7 @@ body {
 .help-btn {
   background: linear-gradient(135deg, #e1f0e4, #c5e6cf);
   color: #4c5a45;
-  margin-right: 20px;
+  margin-right: 12px;
 }
 .reset-btn:active, .help-btn:active {
   transform: translateY(1px);

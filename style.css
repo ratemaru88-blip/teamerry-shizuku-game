@@ -155,47 +155,82 @@ body {
 }
 
 .play-area{
+   touch-action: none;
   position: relative;
   width: 100%;
   height: 100%;
 }
 
 /* canvas */
-#gameCanvas {
+#gameCanvas{
   width: 100%;
   height: 100%;
   display: block;
   background: transparent;
-  border-radius: 16px;
   position: relative;
-  z-index: 1;
+  z-index: 10;
 }
 
-/* cup-line */
-.cup-line {
+/* =========================
+   丸太レール（固定）
+========================= */
+.cup-line{
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 50px;
-  height: 46px;
-  background-image: url("https://static.wixstatic.com/media/e0436a_81ad646eb55c4ec7bc871347d13e64e6~mv2.webp");
-  background-repeat: no-repeat;
-  background-size: contain;
-  background-position: center bottom;
+  left: 50%;
+  bottom: 44px;
+  transform: translateX(-50%);
+  width: 110%;
+  height: 30px;
+  background: url("assets/images/maruta_A.png") center / 100% 100% no-repeat;
+  z-index: 30;
   pointer-events: none;
-  z-index: 5;
 }
-.cup-shadow {
+
+/* =========================
+   連動丸太（可動）
+========================= */
+.cup-handle{
   position: absolute;
-  left: 20%;
-  right: 20%;
-  bottom: 32px;
-  height: 12px;
-  border-radius: 999px;
-  background: radial-gradient(circle, rgba(0,0,0,0.22), rgba(0,0,0,0));
-  opacity: 0.5;
+  left: 50%;
+  bottom: 52px;
+  transform: translateX(-50%);
+  width: 18%;
+  aspect-ratio: 313 / 100;
+  background: url("assets/images/maruta_B.png") center / 100% 100% no-repeat;
+  z-index: 35;
   pointer-events: none;
-  z-index: 2;
+  will-change: left, transform;
+}
+
+/* =========================
+   既存レイヤー整理
+========================= */
+.ants-layer{
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+}
+
+.mino-fx-layer{
+  position: absolute;
+  inset: 0;
+  z-index: 45;
+  pointer-events: none;
+}
+
+.cup-shadow{
+  position: absolute;
+  left: 50%;
+  bottom: 38px;
+  transform: translateX(-50%);
+  width: 92%;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.10);
+  filter: blur(8px);
+  z-index: 20;
+  pointer-events: none;
 }
 
 /* =======================
@@ -214,21 +249,22 @@ body {
   align-items: flex-end;
 }
 
-.leaf-wrapper {
+.leaf-wrapper{
   position: absolute;
-  top: 2px;
+  top: 22px;
   left: 50%;
   transform: translateX(-50%);
   transform-origin: 50% 60%;
-  z-index: 51;
-  will-change: transform;
+  z-index: 35;
+  will-change: left, transform;
+  pointer-events: none;
 }
 
-.leaf-plate {
+.leaf-plate{
   width: 70px;
   height: auto;
+  display: block;
   pointer-events: none;
-  animation: leafBreath 3.6s ease-in-out infinite;
 }
 
 @keyframes leafBreath {
@@ -241,15 +277,15 @@ body {
 #previewDroplet{
   position: absolute;
   left: 50%;
-  top: 18px;
+  top: 36px;
   width: 26px !important;
   height: 26px !important;
   max-width: none !important;
   max-height: none !important;
   transform: translateX(-50%);
-  display: none;
-  opacity: 0;
-  z-index: 52;
+  display: block;
+  opacity: 1;
+  z-index: 36;
   pointer-events: none;
   object-fit: contain;
 }
@@ -257,18 +293,18 @@ body {
 /* =======================
    下UI
 ======================= */
-.bottom-ui {
+.bottom-ui{
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 20px;
+  left: 50%;
+  bottom: 0.5%;
+  transform: translateX(-50%);
+  width: 88%;
+
   display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  padding: 0 14px;
-  font-size: 0.78rem;
-  z-index: 6;
-  gap: 10px;
+  justify-content: space-between;
+  align-items: flex-end;
+
+  z-index: 50;
 }
 
 .reset-btn, .help-btn {
@@ -289,7 +325,7 @@ body {
 .help-btn {
   background: linear-gradient(135deg, #e1f0e4, #c5e6cf);
   color: #4c5a45;
-  margin-right: 4px;
+  
 }
 .reset-btn:active, .help-btn:active {
   transform: translateY(1px);
@@ -338,20 +374,16 @@ body {
 ======================= */
 .ants-layer{
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 64px;           /* cup-line と同じ基準 */
-  height: 46px;           /* cup-line の高さに合わせる */
+  inset: 0;
+  z-index: 40;
   pointer-events: none;
-  z-index: 6;             /* cup-line(5)より上 */
 }
 
 .ant{
   position: absolute;
-  bottom: 14px;           /* cup-line の上に乗る高さ（微調整ポイント） */
   width: 22px;
   height: 22px;
-  will-change: transform;
+  will-change: transform, left;
   opacity: 0.95;
   filter: drop-shadow(0 1px 1px rgba(0,0,0,0.20));
 }
@@ -434,10 +466,10 @@ body {
   padding: 0 !important;
 }
 .mino-fx-layer{
-  position:absolute;
-  left:0; right:0; top:0; bottom:0;
-  pointer-events:none;
-  z-index: 7; /* cup-line(5)より上、UIより下でもOK */
+  position: absolute;
+  inset: 0;
+  z-index: 45;
+  pointer-events: none;
 }
 
 .mino-stars{
@@ -462,5 +494,56 @@ body {
   100% { transform: translate(-50%, -50%) rotate(360deg); }
 }
 .mino-stars{
-  animation: starOrbit 1.2s linear infinite;
+}
+.image-btn{
+  background: transparent;
+  border: none;
+  padding: 0;
+  box-shadow: none;
+}
+
+.image-btn img{
+  display: block;
+  width: 110px;
+  height: auto;
+  pointer-events: none;
+}
+
+
+.help-overlay{
+  z-index: 120;
+  background: rgba(20, 18, 14, 0.45);
+}
+
+.help-card{
+  position: relative;
+  width: min(92%, 380px);
+  max-height: 88%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.help-image{
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 18px;
+  box-shadow: 0 18px 30px rgba(0,0,0,0.28);
+}
+
+.help-close{
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  background: #fff7ea;
+  color: #5a4633;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.22);
 }

@@ -145,10 +145,10 @@ body {
   content: "";
   position: absolute;
   inset: 0;
- background-image: url("assets/images/waku_B.png");
-background-size: cover;
-background-repeat: no-repeat;
-background-position: 48% center;
+  background-image: url("assets/images/waku_B.png");
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: 35% center;
   opacity: 1;
   pointer-events: none;
   z-index: 0;
@@ -157,11 +157,10 @@ background-position: 48% center;
 .play-area{
   touch-action: none;
   position: relative;
-  left: -12px;
+  left: 0;
   width: 100%;
   height: 100%;
 }
-
 /* canvas */
 #gameCanvas{
   width: 100%;

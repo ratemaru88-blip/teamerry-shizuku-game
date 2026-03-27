@@ -130,7 +130,9 @@
         width: cfg.worldWidth,
         height: cfg.worldHeight,
         wireframes: false,
-        background: "transparent",
+        background: "#f8f3ea",
+        wireframes: false,
+        hasBounds: false,
         pixelRatio: 1,
       },
     });
@@ -768,6 +770,7 @@
       createBounds();
       Render.run(render);
       Runner.run(runner, engine);
+      render.context.clearRect(0, 0, canvas.width, canvas.height);
       bindPlateControls();
       pickNextDroplet();
       setHoldingDroplet(nextCharIndex);

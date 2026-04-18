@@ -124,7 +124,7 @@
   }
 
   /* =========================================================
-     アリ（常時歩行 + 救助アリ）
+     アリ（常時歩行 + 救助アリ + タンカー）
   ========================================================= */
 
   const ANT_TEX = {
@@ -134,8 +134,12 @@
     R2: "assets/images/ant_R_2.png",
   };
 
+  const TAN_CAR_SRC = "assets/images/tan_car.png";
+
   const ants = new Set();
   let antTimer = null;
+
+  const tankerRescues = new Set();
 
   const ANT_CFG = {
     minCount: 1,
@@ -151,6 +155,16 @@
     rescueTapInterval: 620,
     rescueTapCount: 4,
     rescueSpawnGapMs: 180,
+
+    tankerChance: 0.28,
+    tankerRunSpeed: 1.0,
+    tankerCarrySpeed: 0.62,
+    tankerLoadDelay: 520,
+    tankerExitPadding: 140,
+    tankerWidth: 116,
+    tankerHeight: 44,
+    tankerBobPx: 2.8,
+    tankerSoundInterval: 900,
   };
 
   function getAntTargetCount() {
@@ -321,6 +335,310 @@
     }
   }
 
+  function createTankerRescueDom(mino, fromLeft) {
+    if (!antsLayer || !mino) return null;
+
+    const wrap = document.createElement("div");
+    wrap.className = "ant-tanker-wrap";
+    wrap.style.position = "absolute";
+    wrap.style.left = "0px";
+    wrap.style.bottom = `${ANT_CFG.yBottomPx - 2}px`;
+    wrap.style.width = `${ANT_CFG.tankerWidth}px`;
+    wrap.style.height = `${ANT_CFG.tankerHeight}px`;
+    wrap.style.pointerEvents = "none";
+    wrap.style.transformOrigin = "center bottom";
+    wrap.style.display = "block";
+    wrap.style.opacity = "1";
+    wrap.style.zIndex = "18";
+
+    const cart = document.createElement("img");
+    cart.src = TAN_CAR_SRC;
+    cart.alt = "leaf tanker";
+    cart.style.position = "absolute";
+    cart.style.left = "18px";
+    cart.style.bottom = "6px";
+    cart.style.width = "80px";
+    cart.style.height = "auto";
+    cart.style.pointerEvents = "none";
+    cart.style.zIndex = "2";
+    cart.style.filter = "drop-shadow(0 1px 1px rgba(0,0,0,0.12))";
+
+    const minoImg = document.createElement("img");
+    minoImg.src = "assets/images/minomusi_3.webp";
+    minoImg.alt = "mino on tanker";
+    minoImg.style.position = "absolute";
+    minoImg.style.left = "34px";
+    minoImg.style.bottom = "14px";
+    minoImg.style.width = "44px";
+    minoImg.style.height = "auto";
+    minoImg.style.pointerEvents = "none";
+    minoImg.style.zIndex = "5";
+    minoImg.style.transformOrigin = "center center";
+    minoImg.style.filter = "drop-shadow(0 1px 1px rgba(0,0,0,0.10))";
+
+    const antLeft = document.createElement("img");
+    antLeft.src = ANT_TEX.R1;
+    antLeft.alt = "carrier ant";
+    antLeft.style.position = "absolute";
+    antLeft.style.left = "0px";
+    antLeft.style.bottom = "0px";
+    antLeft.style.width = "28px";
+    antLeft.style.height = "auto";
+    antLeft.style.pointerEvents = "none";
+    antLeft.style.zIndex = "4";
+
+    const antRight = document.createElement("img");
+    antRight.src = ANT_TEX.L1;
+    antRight.alt = "carrier ant";
+    antRight.style.position = "absolute";
+    antRight.style.right = "0px";
+    antRight.style.bottom = "0px";
+    antRight.style.width = "28px";
+    antRight.style.height = "auto";
+    antRight.style.pointerEvents = "none";
+    antRight.style.zIndex = "4";
+
+    wrap.appendChild(cart);
+    wrap.appendChild(minoImg);
+    wrap.appendChild(antLeft);
+    wrap.appendChild(antRight);
+    antsLayer.appendChild(wrap);
+
+    const areaWidth =
+      antsLayer.clientWidth || canvas.getBoundingClientRect().width || 360;
+
+    const startX = fromLeft
+      ? -ANT_CFG.tankerWidth - 24
+      : areaWidth + 24;
+    const targetX = mino.position.x - ANT_CFG.tankerWidth / 2;
+    const direction = fromLeft ? 1 : -1;
+
+    const obj = {
+      id: `tanker-${Math.random().toString(36).slice(2)}`,
+      el: wrap,
+      cartEl: cart,
+      minoEl: minoImg,
+      antLeftEl: antLeft,
+      antRightEl: antRight,
+      mino,
+      fromLeft,
+      x: startX,
+      targetX,
+      yBottom: ANT_CFG.yBottomPx - 2,
+      width: ANT_CFG.tankerWidth,
+      height: ANT_CFG.tankerHeight,
+      speed: ANT_CFG.tankerRunSpeed * direction,
+      direction,
+      state: "run",
+      loadAt: 0,
+      bobSeed: Math.random() * 1000,
+      startedAt: performance.now(),
+      lastLeafAt: 0,
+      frame: 0,
+      lastFrameAt: performance.now(),
+      frameInterval: 120,
+    };
+
+    wrap.style.left = `${obj.x}px`;
+
+    tankerRescues.add(obj);
+    return obj;
+  }
+
+  function playLeafCarrySound(volume = 0.22) {
+    try {
+      const s = new Audio("assets/sounds/leaf_soft.mp3");
+      s.volume = volume;
+      s.play();
+    } catch (_) {}
+  }
+
+  function getTankerCarryVolume(obj, areaWidth) {
+    const centerX = obj.x + obj.width / 2;
+    const safeCenter = areaWidth * 0.5;
+    const dist = Math.abs(centerX - safeCenter);
+    const fadeStart = areaWidth * 0.18;
+    const fadeEnd = areaWidth * 0.52;
+
+    if (dist <= fadeStart) return 0.22;
+    if (dist >= fadeEnd) return 0.08;
+
+    const t = (dist - fadeStart) / (fadeEnd - fadeStart);
+    return 0.22 - t * 0.14;
+  }
+
+  function updateTankerMinoPose(obj, now) {
+    if (!obj || !obj.minoEl) return;
+
+    let baseLeft = 36;
+    let baseBottom = 14;
+    let baseDeg = 90;
+
+    if (obj.state === "run") {
+      baseLeft = 32;
+      baseBottom = 10;
+      baseDeg = 70;
+    } else if (obj.state === "load") {
+      const t = Math.min(1, (now - obj.loadAt) / ANT_CFG.tankerLoadDelay);
+      baseLeft = 34 + t * 2;
+      baseBottom = 10 + t * 4;
+      baseDeg = 70 + t * 20;
+    } else if (obj.state === "carry") {
+      baseLeft = 36;
+      baseBottom = 14;
+      baseDeg = 90;
+    }
+
+    const sway = Math.sin(now * 0.012 + obj.bobSeed) * 4.5;
+    const lift = Math.sin(now * 0.018 + obj.bobSeed) * 1.5;
+
+    obj.minoEl.style.left = `${baseLeft}px`;
+    obj.minoEl.style.bottom = `${baseBottom + lift}px`;
+    obj.minoEl.style.transform =
+      `rotate(${baseDeg + sway}deg)`;
+  }
+
+  function startTankerRescue(m) {
+    if (!m || m.rescueFinished) return;
+
+    m.rescueFinished = true;
+    m.rescueRequested = false;
+    m.state = "tanker";
+    m._reviveQueued = false;
+
+    clearMinoStars(m);
+    stopMinoMove();
+
+    Body.setStatic(m, true);
+    m.isSensor = true;
+    Body.setVelocity(m, { x: 0, y: 0 });
+    Body.setAngularVelocity(m, 0);
+    Body.setAngle(m, Math.PI / 2);
+
+    if (m.render) {
+      m.render.visible = false;
+    }
+
+    setTimeout(() => {
+      playLeafCarrySound(0.2);
+    }, 120);
+
+    const fromLeft = Math.random() < 0.5;
+    createTankerRescueDom(m, fromLeft);
+  }
+
+  function removeTankerRescue(obj) {
+    if (!obj) return;
+    tankerRescues.delete(obj);
+    if (obj.el && obj.el.parentNode) {
+      obj.el.parentNode.removeChild(obj.el);
+    }
+  }
+
+  function updateTankerRescues() {
+    if (!antsLayer) return;
+    const areaWidth =
+      antsLayer.clientWidth || canvas.getBoundingClientRect().width || 360;
+    const now = performance.now();
+
+    tankerRescues.forEach((obj) => {
+      const m = obj.mino;
+      if (!m) {
+        removeTankerRescue(obj);
+        return;
+      }
+
+      if (obj.state === "run") {
+        obj.x += obj.speed;
+        obj.el.style.left = `${obj.x}px`;
+
+        const reached =
+          obj.direction > 0 ? obj.x >= obj.targetX : obj.x <= obj.targetX;
+
+        const bob = Math.sin(now * 0.010 + obj.bobSeed) * 1.2;
+        obj.el.style.transform = `translateY(${bob}px)`;
+
+        updateTankerMinoPose(obj, now);
+
+        if (now - obj.lastFrameAt >= obj.frameInterval) {
+          obj.frame = obj.frame === 0 ? 1 : 0;
+          obj.lastFrameAt = now;
+          obj.antLeftEl.src = obj.frame === 0 ? ANT_TEX.R1 : ANT_TEX.R2;
+          obj.antRightEl.src = obj.frame === 0 ? ANT_TEX.L1 : ANT_TEX.L2;
+        }
+
+        if (reached) {
+          obj.x = obj.targetX;
+          obj.el.style.left = `${obj.x}px`;
+          obj.state = "load";
+          obj.loadAt = now;
+          obj.lastLeafAt = now;
+          playLeafCarrySound(0.2);
+        }
+        return;
+      }
+
+      if (obj.state === "load") {
+        const bob = Math.sin(now * 0.012 + obj.bobSeed) * 1.5;
+        obj.el.style.transform = `translateY(${bob}px)`;
+
+        updateTankerMinoPose(obj, now);
+
+        if (now - obj.loadAt >= ANT_CFG.tankerLoadDelay) {
+          obj.state = "carry";
+          obj.speed = ANT_CFG.tankerCarrySpeed * obj.direction;
+          playLeafCarrySound(getTankerCarryVolume(obj, areaWidth));
+        }
+        return;
+      }
+
+      if (obj.state === "carry") {
+        obj.x += obj.speed;
+
+        const bob = Math.sin(now * 0.014 + obj.bobSeed) * ANT_CFG.tankerBobPx;
+        const swayX = Math.sin(now * 0.010 + obj.bobSeed) * 1.1;
+        obj.el.style.left = `${obj.x}px`;
+        obj.el.style.transform = `translate(${swayX}px, ${bob}px)`;
+
+        updateTankerMinoPose(obj, now);
+
+        const antStep = Math.sin(now * 0.022 + obj.bobSeed) * 2.2;
+        obj.antLeftEl.style.bottom = `${Math.max(0, antStep)}px`;
+        obj.antRightEl.style.bottom = `${Math.max(0, -antStep)}px`;
+
+        if (now - obj.lastFrameAt >= obj.frameInterval) {
+          obj.frame = obj.frame === 0 ? 1 : 0;
+          obj.lastFrameAt = now;
+          obj.antLeftEl.src = obj.frame === 0 ? ANT_TEX.R1 : ANT_TEX.R2;
+          obj.antRightEl.src = obj.frame === 0 ? ANT_TEX.L1 : ANT_TEX.L2;
+        }
+
+        if (now - obj.lastLeafAt >= ANT_CFG.tankerSoundInterval) {
+          obj.lastLeafAt = now;
+          playLeafCarrySound(getTankerCarryVolume(obj, areaWidth));
+        }
+
+        const outLeft = obj.x < -obj.width - ANT_CFG.tankerExitPadding;
+        const outRight = obj.x > areaWidth + ANT_CFG.tankerExitPadding;
+        if (outLeft || outRight) {
+          obj.state = "leave";
+        }
+        return;
+      }
+
+      if (obj.state === "leave") {
+        obj.el.style.opacity = "0";
+        clearMinoStars(m);
+        stopMinoMove();
+
+        World.remove(matterWorld, m);
+        minos.delete(m);
+
+        removeTankerRescue(obj);
+      }
+    });
+  }
+
   function removeAnt(antObj) {
     if (!antObj) return;
 
@@ -336,6 +654,16 @@
 
   function clearAnts() {
     [...ants].forEach(removeAnt);
+  }
+
+  function clearTankerRescues() {
+    [...tankerRescues].forEach((obj) => {
+      if (obj.mino) {
+        clearMinoStars(obj.mino);
+        stopMinoMove();
+      }
+      removeTankerRescue(obj);
+    });
   }
 
   function spawnAntIfNeeded() {
@@ -446,7 +774,13 @@
           setTimeout(() => {
             if (!m || m.state !== "ko" || m.rescueFinished) return;
 
-            reviveMino(m);
+            const useTanker = Math.random() < ANT_CFG.tankerChance;
+
+            if (useTanker) {
+              startTankerRescue(m);
+            } else {
+              reviveMino(m);
+            }
 
             const latestRescuers = [...ants].filter(
               (a) => a.role === "rescuer" && a.targetMino === m
@@ -503,7 +837,8 @@
       antObj.el.style.left = `${antObj.x}px`;
 
       const sway = Math.sin(now * 0.012 + antObj.x * 0.03) * 0.4;
-      antObj.el.style.transform = `translate(${Math.sin(now * 0.02) * 0.5}px, ${sway}px)`;
+      antObj.el.style.transform =
+        `translate(${Math.sin(now * 0.02) * 0.5}px, ${sway}px)`;
 
       if (now - antObj.lastFrameAt >= antObj.frameInterval) {
         antObj.frame = antObj.frame === 0 ? 1 : 0;
@@ -522,11 +857,14 @@
         removeAnt(antObj);
       }
     });
+
+    updateTankerRescues();
   }
 
   function startAntLoop() {
     stopAntLoop();
     clearAnts();
+    clearTankerRescues();
 
     const initialCount = getAntTargetCount();
     for (let i = 0; i < initialCount; i++) {
@@ -787,19 +1125,19 @@
   ];
 
   const minoSounds = {
-  move: new Audio("assets/sounds/mino_move.wav"),
-  rakka: new Audio("assets/sounds/mino_rakka.mp3"),
-  hukkatu: new Audio("assets/sounds/mino_hukkatu.mp3"),
-};
+    move: new Audio("assets/sounds/mino_move.wav"),
+    rakka: new Audio("assets/sounds/mino_rakka.mp3"),
+    hukkatu: new Audio("assets/sounds/mino_hukkatu.mp3"),
+  };
 
-minoSounds.move.loop = true;
-minoSounds.move.volume = 0.18;
-minoSounds.rakka.volume = 0.65;
-minoSounds.hukkatu.volume = 0.65;
+  minoSounds.move.loop = true;
+  minoSounds.move.volume = 0.18;
+  minoSounds.rakka.volume = 0.65;
+  minoSounds.hukkatu.volume = 0.65;
 
   const antSounds = {
-  tap: new Audio("assets/sounds/ants_tutuku.mp3"),
-};
+    tap: new Audio("assets/sounds/ants_tutuku.mp3"),
+  };
 
   antSounds.tap.volume = 0.45;
 
@@ -848,19 +1186,20 @@ minoSounds.hukkatu.volume = 0.65;
       minoSounds.move.currentTime = 0;
     } catch (_) {}
   }
+
   function playMinoRakka() {
     try {
-    minoSounds.rakka.currentTime = 0;
-    minoSounds.rakka.play();
-  } catch (_) {}
-}
+      minoSounds.rakka.currentTime = 0;
+      minoSounds.rakka.play();
+    } catch (_) {}
+  }
 
   function playMinoHukkatu() {
     try {
-    minoSounds.hukkatu.currentTime = 0;
-    minoSounds.hukkatu.play();
-  } catch (_) {}
-}
+      minoSounds.hukkatu.currentTime = 0;
+      minoSounds.hukkatu.play();
+    } catch (_) {}
+  }
 
   function reviveMino(m) {
     if (!m || m.rescueFinished) return;
@@ -869,17 +1208,18 @@ minoSounds.hukkatu.volume = 0.65;
     m.rescueRequested = false;
 
     playMinoHukkatu();
-    
     clearMinoStars(m);
 
     Body.setStatic(m, false);
     m.isSensor = true;
 
-   Body.setAngle(m, 0);
-   Body.setAngularVelocity(m, 0);
+    Body.setAngle(m, 0);
+    Body.setAngularVelocity(m, 0);
+    Body.setVelocity(m, { x: 0, y: -0.28 });
 
-   // 最初は強く上げすぎず、ぴよん用の初速だけ入れる
-   Body.setVelocity(m, { x: 0, y: -0.28 });
+    if (m.render) {
+      m.render.visible = true;
+    }
 
     if (m.render && m.render.sprite) {
       m.render.sprite.texture = MINO_TEX_NORMAL;
@@ -931,6 +1271,7 @@ minoSounds.hukkatu.volume = 0.65;
       isSensor: true,
       frictionAir: 0.0,
       render: {
+        visible: true,
         fillStyle: "transparent",
         strokeStyle: "rgba(0,0,0,0)",
         lineWidth: 0,
@@ -957,6 +1298,7 @@ minoSounds.hukkatu.volume = 0.65;
     mino._tapReactUntil = 0;
     mino._reviveBounceUntil = 0;
     mino._reviveQueued = false;
+    mino._reviveSquashUntil = 0;
 
     mino._inertiaOrig = mino.inertia;
     Body.setInertia(mino, Infinity);
@@ -1146,6 +1488,10 @@ minoSounds.hukkatu.volume = 0.65;
     m._tapReactUntil = 0;
     m._reviveQueued = false;
 
+    if (m.render) {
+      m.render.visible = true;
+    }
+
     if (m.render && m.render.sprite) {
       m.render.sprite.texture = MINO_TEX_DIZZY;
       setMinoSpriteScaleByPx(m, MINO_CFG.sizePx);
@@ -1259,7 +1605,10 @@ minoSounds.hukkatu.volume = 0.65;
         minos.delete(m);
       }
 
-      if (m.position.y > worldHeight + 220) {
+      if (
+        m.state !== "tanker" &&
+        m.position.y > worldHeight + 220
+      ) {
         clearMinoStars(m);
 
         if (m.rope) World.remove(matterWorld, m.rope);
@@ -1380,35 +1729,38 @@ minoSounds.hukkatu.volume = 0.65;
       }
 
       if (m.state === "return") {
-  if (m.rope) {
-    m.rope.stiffness = 0.055;
-    m.rope.length = Math.max(92, m.rope.length - 0.45);
-  }
+        if (m.rope) {
+          m.rope.stiffness = 0.055;
+          m.rope.length = Math.max(92, m.rope.length - 0.45);
+        }
 
-  const elapsed = performance.now() - (m.reviveAt || 0);
+        const elapsed = performance.now() - (m.reviveAt || 0);
 
-  let returnSpeed = MINO_CFG.upSpeed;
-  if (elapsed < 900) {
-    returnSpeed = -0.22;
-  } else if (elapsed < 1800) {
-    returnSpeed = -0.32;
-  } else {
-    returnSpeed = -0.42;
-  }
+        let returnSpeed = MINO_CFG.upSpeed;
+        if (elapsed < 900) {
+          returnSpeed = -0.22;
+        } else if (elapsed < 1800) {
+          returnSpeed = -0.32;
+        } else {
+          returnSpeed = -0.42;
+        }
 
-  Body.setVelocity(m, { x: 0, y: returnSpeed });
+        Body.setVelocity(m, { x: 0, y: returnSpeed });
 
-  if (m._reviveBounceUntil && performance.now() < m._reviveBounceUntil) {
-    const t = (m._reviveBounceUntil - performance.now()) / 420;
-    Body.setAngle(m, Math.sin((1 - t) * Math.PI * 2.0) * 0.16);
-  } else {
-    Body.setAngle(m, 0);
-  }
+        if (m._reviveBounceUntil && performance.now() < m._reviveBounceUntil) {
+          const t = (m._reviveBounceUntil - performance.now()) / 420;
+          Body.setAngle(m, Math.sin((1 - t) * Math.PI * 2.0) * 0.16);
+        } else {
+          Body.setAngle(m, 0);
+        }
 
-  return;
-}
-       
-      
+        return;
+      }
+
+      if (m.state === "tanker") {
+        return;
+      }
+
       if (m.state === "fail") {
         const rimY = dropletEngine.debug.cupRimY;
 
@@ -1573,6 +1925,7 @@ minoSounds.hukkatu.volume = 0.65;
   function fullResetExtras() {
     stopAntLoop();
     clearAnts();
+    clearTankerRescues();
     startAntLoop();
 
     stopBeeTimer();

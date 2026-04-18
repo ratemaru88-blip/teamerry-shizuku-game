@@ -150,7 +150,7 @@
     yBottomPx: 74,
 
     rescueRunSpeed: 1.05,
-    rescueStopOffset: 16,
+    rescueStopOffset: 9,
     rescueTapInterval: 620,
     rescueTapCount: 4,
     rescueSpawnGapMs: 180,
@@ -741,16 +741,25 @@
       antObj.x += antObj.speed;
       antObj.el.style.left = `${antObj.x}px`;
 
-      const reached =
-        antObj.speed > 0
-          ? antObj.x >= antObj.targetX
-          : antObj.x <= antObj.targetX;
+      const distToTarget = Math.abs(antObj.x - antObj.targetX);
+      const reached = distToTarget <= 2;
 
       if (reached) {
         antObj.x = antObj.targetX;
         antObj.el.style.left = `${antObj.x}px`;
+        antObj.rescueState = "arrived";
+        antObj.arrivedAt = now;
+        antObj.nextTapAt = now + 260 + (antObj.tapPhaseOffset || 0);
+      }
+      return;
+    }
+
+    if (antObj.rescueState === "arrived") {
+      antObj.el.style.left = `${antObj.x}px`;
+      antObj.el.style.bottom = `${antObj.yBottom}px`;
+
+      if (now >= antObj.nextTapAt) {
         antObj.rescueState = "tap";
-        antObj.nextTapAt = now + 180 + (antObj.tapPhaseOffset || 0);
       }
       return;
     }
@@ -762,8 +771,8 @@
       if (antObj._pokeUntil && now < antObj._pokeUntil) {
         const t = 1 - (antObj._pokeUntil - now) / 140;
         const hop = Math.sin(t * Math.PI);
-        pokeOffsetX = (antObj.fromLeft ? 1 : -1) * hop * 5;
-        pokeLiftY = hop * 4;
+        pokeOffsetX = (antObj.fromLeft ? 1 : -1) * hop * 7;
+        pokeLiftY = hop * 3;
       }
 
       antObj.el.style.left = `${antObj.x + pokeOffsetX}px`;
@@ -1432,11 +1441,17 @@
   }
 
   function getMinoStarAnchor(m) {
-    const angle = m.angle || Math.PI / 2;
-
     const canvasRect = canvas.getBoundingClientRect();
     const isMobileView = canvasRect.width <= 430;
 
+    if (m.state === "ko") {
+      return {
+        x: m.position.x,
+        y: m.position.y + (isMobileView ? -34 : -26),
+      };
+    }
+
+    const angle = m.angle || Math.PI / 2;
     const localX = isMobileView ? 18 : 25;
     const localY = isMobileView ? -26 : -15;
 
@@ -1492,9 +1507,9 @@
     if (!m || m.state === "ko") return;
 
     playMinoRakka();
+    stopMinoMove();
 
     m.state = "ko";
-    stopMinoMove();
 
     const rimY = dropletEngine.debug.cupRimY;
     const minX = 42;
@@ -1789,6 +1804,8 @@
       }
 
       if (m.state === "fail") {
+        stopMinoMove();
+
         const rimY = dropletEngine.debug.cupRimY;
 
         Body.setVelocity(m, {

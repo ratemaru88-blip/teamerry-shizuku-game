@@ -305,34 +305,117 @@
       .slice(0, maxCount);
   }
 
-  function requestRescueAntsForMino(mino) {
-    if (!mino || mino.rescueStarted || mino.rescueFinished) return;
-    if (mino.state !== "ko") return;
+  /* =========================================================
+     ミノムシレディ
+  ========================================================= */
 
-    mino.rescueStarted = true;
+  const LADY_TEX = "assets/images/minomusi_L1.webp";
 
-    const nearbyWalkers = findNearbyWalkerAnts(mino, 4, 130);
+  const LADY_CFG = {
+    chance: 0.06,
+    descendSpeed: 0.78,
+    floatSpeed: -0.62,
+    swayPx: 10,
+    waitAfterTouchMs: 380,
+  };
 
-    nearbyWalkers.forEach((antObj, index) => {
-      convertWalkerToRescuer(antObj, mino);
-      antObj.nextTapAt = performance.now() + 120 + index * 100;
-    });
+  const ladies = new Set();
 
-    const currentRescuers = [...ants].filter(
-      (a) => a.role === "rescuer" && a.targetMino === mino
-    );
+  function spawnLadyRescue(mino) {
+    if (!mino || mino.rescueFinished) return null;
+    if (!minoFxLayer && !antsLayer) return null;
 
-    const needCount = Math.max(0, 4 - currentRescuers.length);
+    const layer = minoFxLayer || antsLayer;
 
-    for (let i = 0; i < needCount; i++) {
-      const fromLeft = i % 2 === 0;
+    const el = document.createElement("img");
+    el.src = LADY_TEX;
+    el.alt = "lady rescue";
+    el.style.position = "absolute";
+    el.style.width = "64px";
+    el.style.height = "auto";
+    el.style.pointerEvents = "none";
+    el.style.zIndex = "26";
+    el.style.transform = "translate(-50%, -50%)";
+    el.style.filter = "drop-shadow(0 2px 3px rgba(0,0,0,0.15))";
 
-      setTimeout(() => {
-        if (!mino || mino.state !== "ko" || mino.rescueFinished) return;
-        createRescueAntDom(mino, fromLeft);
-      }, i * ANT_CFG.rescueSpawnGapMs);
+    layer.appendChild(el);
+
+    const lady = {
+      id: `lady-${Math.random().toString(36).slice(2)}`,
+      el,
+      mino,
+      x: mino.position.x,
+      y: -56,
+      state: "descend",
+      spawnAt: performance.now(),
+      touchAt: 0,
+      swaySeed: Math.random() * 1000,
+    };
+
+    ladies.add(lady);
+    return lady;
+  }
+
+  function removeLady(lady) {
+    if (!lady) return;
+    ladies.delete(lady);
+    if (lady.el && lady.el.parentNode) {
+      lady.el.parentNode.removeChild(lady.el);
     }
   }
+
+  function clearLadies() {
+    [...ladies].forEach(removeLady);
+  }
+
+  function updateLadies() {
+    const now = performance.now();
+
+    ladies.forEach((lady) => {
+      const m = lady.mino;
+      if (!m) {
+        removeLady(lady);
+        return;
+      }
+
+      if (lady.state === "descend") {
+        lady.y += LADY_CFG.descendSpeed;
+        lady.x =
+          m.position.x + Math.sin(now * 0.004 + lady.swaySeed) * LADY_CFG.swayPx;
+
+        const targetY = m.position.y - 24;
+        if (lady.y >= targetY) {
+          lady.y = targetY;
+          lady.state = "touch";
+          lady.touchAt = now;
+          reviveMino(m, { force: true, silent: true });
+        }
+      } else if (lady.state === "touch") {
+        lady.x =
+          m.position.x + Math.sin(now * 0.005 + lady.swaySeed) * (LADY_CFG.swayPx * 0.7);
+        lady.y = m.position.y - 24;
+
+        if (now - lady.touchAt >= LADY_CFG.waitAfterTouchMs) {
+          lady.state = "float";
+        }
+      } else if (lady.state === "float") {
+        lady.y += LADY_CFG.floatSpeed;
+        lady.x += Math.sin(now * 0.004 + lady.swaySeed) * 0.35;
+
+        if (lady.y < -90) {
+          removeLady(lady);
+          return;
+        }
+      }
+
+      lady.el.style.left = `${lady.x}px`;
+      lady.el.style.top = `${lady.y}px`;
+    });
+  }
+
+  /* =========================================================
+     葉っぱ音
+  ========================================================= */
 
   let leafCarryAudio = null;
 
@@ -369,6 +452,10 @@
     const t = (dist - fadeStart) / (fadeEnd - fadeStart);
     return 0.22 - t * 0.14;
   }
+
+  /* =========================================================
+     タンカー
+  ========================================================= */
 
   function createTankerRescueDom(mino, fromLeft) {
     if (!antsLayer || !mino) return null;
@@ -549,6 +636,18 @@
     }
   }
 
+  function clearTankerRescues() {
+    stopLeafCarrySound();
+
+    [...tankerRescues].forEach((obj) => {
+      if (obj.mino) {
+        clearMinoStars(obj.mino);
+        stopMinoMove();
+      }
+      removeTankerRescue(obj);
+    });
+  }
+
   function updateTankerRescues() {
     if (!antsLayer) return;
     const areaWidth =
@@ -661,6 +760,10 @@
     });
   }
 
+  /* =========================================================
+     アリ更新
+  ========================================================= */
+
   function removeAnt(antObj) {
     if (!antObj) return;
 
@@ -676,18 +779,6 @@
 
   function clearAnts() {
     [...ants].forEach(removeAnt);
-  }
-
-  function clearTankerRescues() {
-    stopLeafCarrySound();
-
-    [...tankerRescues].forEach((obj) => {
-      if (obj.mino) {
-        clearMinoStars(obj.mino);
-        stopMinoMove();
-      }
-      removeTankerRescue(obj);
-    });
   }
 
   function spawnAntIfNeeded() {
@@ -722,6 +813,41 @@
     if (antTimer) {
       clearTimeout(antTimer);
       antTimer = null;
+    }
+  }
+
+  function requestRescueAntsForMino(mino) {
+    if (!mino || mino.rescueStarted || mino.rescueFinished) return;
+    if (mino.state !== "ko") return;
+
+    mino.rescueStarted = true;
+
+    if (Math.random() < LADY_CFG.chance) {
+      mino.ladyRescue = true;
+      spawnLadyRescue(mino);
+      return;
+    }
+
+    const nearbyWalkers = findNearbyWalkerAnts(mino, 4, 130);
+
+    nearbyWalkers.forEach((antObj, index) => {
+      convertWalkerToRescuer(antObj, mino);
+      antObj.nextTapAt = performance.now() + 120 + index * 100;
+    });
+
+    const currentRescuers = [...ants].filter(
+      (a) => a.role === "rescuer" && a.targetMino === mino
+    );
+
+    const needCount = Math.max(0, 4 - currentRescuers.length);
+
+    for (let i = 0; i < needCount; i++) {
+      const fromLeft = i % 2 === 0;
+
+      setTimeout(() => {
+        if (!mino || mino.state !== "ko" || mino.rescueFinished) return;
+        createRescueAntDom(mino, fromLeft);
+      }, i * ANT_CFG.rescueSpawnGapMs);
     }
   }
 
@@ -870,7 +996,8 @@
       antObj.el.style.left = `${antObj.x}px`;
 
       const sway = Math.sin(now * 0.012 + antObj.x * 0.03) * 0.4;
-      antObj.el.style.transform = `translate(${Math.sin(now * 0.02) * 0.5}px, ${sway}px)`;
+      antObj.el.style.transform =
+        `translate(${Math.sin(now * 0.02) * 0.5}px, ${sway}px)`;
 
       if (now - antObj.lastFrameAt >= antObj.frameInterval) {
         antObj.frame = antObj.frame === 0 ? 1 : 0;
@@ -897,6 +1024,7 @@
     stopAntLoop();
     clearAnts();
     clearTankerRescues();
+    clearLadies();
 
     const initialCount = getAntTargetCount();
     for (let i = 0; i < initialCount; i++) {
@@ -912,6 +1040,7 @@
 
     Events.on(dropletEngine.debug.engine, "beforeUpdate", () => {
       updateAnts();
+      updateLadies();
     });
   }
 
@@ -1233,13 +1362,19 @@
     } catch (_) {}
   }
 
-  function reviveMino(m) {
-    if (!m || m.rescueFinished) return;
+  function reviveMino(m, options = {}) {
+    const { force = false, silent = false } = options;
+    if (!m) return;
+    if (m.rescueFinished && !force) return;
 
     m.rescueFinished = true;
     m.rescueRequested = false;
+    m.ladyRescue = false;
 
-    playMinoHukkatu();
+    stopMinoMove();
+    if (!silent) {
+      playMinoHukkatu();
+    }
     clearMinoStars(m);
 
     Body.setStatic(m, false);
@@ -1286,7 +1421,7 @@
       World.add(matterWorld, rope);
     }
 
-    playMinoMove();
+    stopMinoMove();
   }
 
   function spawnMino() {
@@ -1321,6 +1456,7 @@
     mino.rescueFinished = false;
     mino.reviveAt = 0;
     mino.rescueAntIds = new Set();
+    mino.ladyRescue = false;
 
     mino.spawnAt = performance.now();
     mino.windSeed = Math.random() * 1000;
@@ -1528,6 +1664,7 @@
     m.isSensor = false;
     m._tapReactUntil = 0;
     m._reviveQueued = false;
+    m.ladyRescue = false;
 
     if (m.render) {
       m.render.visible = true;
@@ -1771,6 +1908,8 @@
       }
 
       if (m.state === "return") {
+        stopMinoMove();
+
         if (m.rope) {
           m.rope.stiffness = 0.055;
           m.rope.length = Math.max(92, m.rope.length - 0.45);
@@ -1796,6 +1935,10 @@
           Body.setAngle(m, 0);
         }
 
+        return;
+      }
+
+      if (m.state === "lady") {
         return;
       }
 
@@ -1970,6 +2113,7 @@
     stopAntLoop();
     clearAnts();
     clearTankerRescues();
+    clearLadies();
     startAntLoop();
 
     stopBeeTimer();

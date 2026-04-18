@@ -138,7 +138,6 @@
 
   const ants = new Set();
   let antTimer = null;
-
   const tankerRescues = new Set();
 
   const ANT_CFG = {
@@ -335,6 +334,42 @@
     }
   }
 
+  let leafCarryAudio = null;
+
+  function playLeafCarrySound(volume = 0.22) {
+    try {
+      if (leafCarryAudio) {
+        leafCarryAudio.pause();
+        leafCarryAudio.currentTime = 0;
+      }
+      leafCarryAudio = new Audio("assets/sounds/leaf_soft.mp3");
+      leafCarryAudio.volume = volume;
+      leafCarryAudio.play();
+    } catch (_) {}
+  }
+
+  function stopLeafCarrySound() {
+    try {
+      if (!leafCarryAudio) return;
+      leafCarryAudio.pause();
+      leafCarryAudio.currentTime = 0;
+    } catch (_) {}
+  }
+
+  function getTankerCarryVolume(obj, areaWidth) {
+    const centerX = obj.x + obj.width / 2;
+    const safeCenter = areaWidth * 0.5;
+    const dist = Math.abs(centerX - safeCenter);
+    const fadeStart = areaWidth * 0.18;
+    const fadeEnd = areaWidth * 0.52;
+
+    if (dist <= fadeStart) return 0.22;
+    if (dist >= fadeEnd) return 0.08;
+
+    const t = (dist - fadeStart) / (fadeEnd - fadeStart);
+    return 0.22 - t * 0.14;
+  }
+
   function createTankerRescueDom(mino, fromLeft) {
     if (!antsLayer || !mino) return null;
 
@@ -375,6 +410,7 @@
     minoImg.style.zIndex = "5";
     minoImg.style.transformOrigin = "center center";
     minoImg.style.filter = "drop-shadow(0 1px 1px rgba(0,0,0,0.10))";
+    minoImg.style.opacity = "0";
 
     const antLeft = document.createElement("img");
     antLeft.src = ANT_TEX.R1;
@@ -445,28 +481,6 @@
     return obj;
   }
 
-  function playLeafCarrySound(volume = 0.22) {
-    try {
-      const s = new Audio("assets/sounds/leaf_soft.mp3");
-      s.volume = volume;
-      s.play();
-    } catch (_) {}
-  }
-
-  function getTankerCarryVolume(obj, areaWidth) {
-    const centerX = obj.x + obj.width / 2;
-    const safeCenter = areaWidth * 0.5;
-    const dist = Math.abs(centerX - safeCenter);
-    const fadeStart = areaWidth * 0.18;
-    const fadeEnd = areaWidth * 0.52;
-
-    if (dist <= fadeStart) return 0.22;
-    if (dist >= fadeEnd) return 0.08;
-
-    const t = (dist - fadeStart) / (fadeEnd - fadeStart);
-    return 0.22 - t * 0.14;
-  }
-
   function updateTankerMinoPose(obj, now) {
     if (!obj || !obj.minoEl) return;
 
@@ -475,15 +489,19 @@
     let baseDeg = 90;
 
     if (obj.state === "run") {
-      baseLeft = 32;
-      baseBottom = 10;
-      baseDeg = 70;
-    } else if (obj.state === "load") {
+      obj.minoEl.style.opacity = "0";
+      return;
+    }
+
+    if (obj.state === "load") {
+      obj.minoEl.style.opacity = "1";
+
       const t = Math.min(1, (now - obj.loadAt) / ANT_CFG.tankerLoadDelay);
-      baseLeft = 34 + t * 2;
-      baseBottom = 10 + t * 4;
-      baseDeg = 70 + t * 20;
+      baseLeft = 30 + t * 6;
+      baseBottom = 6 + t * 8;
+      baseDeg = 78 + t * 12;
     } else if (obj.state === "carry") {
+      obj.minoEl.style.opacity = "1";
       baseLeft = 36;
       baseBottom = 14;
       baseDeg = 90;
@@ -494,8 +512,7 @@
 
     obj.minoEl.style.left = `${baseLeft}px`;
     obj.minoEl.style.bottom = `${baseBottom + lift}px`;
-    obj.minoEl.style.transform =
-      `rotate(${baseDeg + sway}deg)`;
+    obj.minoEl.style.transform = `rotate(${baseDeg + sway}deg)`;
   }
 
   function startTankerRescue(m) {
@@ -515,13 +532,10 @@
     Body.setAngularVelocity(m, 0);
     Body.setAngle(m, Math.PI / 2);
 
-    if (m.render) {
-      m.render.visible = false;
+    if (m.render && m.render.sprite) {
+      m.render.sprite.texture = MINO_TEX_DIZZY;
+      setMinoSpriteScaleByPx(m, MINO_CFG.sizePx);
     }
-
-    setTimeout(() => {
-      playLeafCarrySound(0.2);
-    }, 120);
 
     const fromLeft = Math.random() < 0.5;
     createTankerRescueDom(m, fromLeft);
@@ -573,6 +587,12 @@
           obj.state = "load";
           obj.loadAt = now;
           obj.lastLeafAt = now;
+
+          if (m.render) {
+            m.render.visible = false;
+          }
+
+          obj.minoEl.style.opacity = "1";
           playLeafCarrySound(0.2);
         }
         return;
@@ -628,8 +648,10 @@
 
       if (obj.state === "leave") {
         obj.el.style.opacity = "0";
+
         clearMinoStars(m);
         stopMinoMove();
+        stopLeafCarrySound();
 
         World.remove(matterWorld, m);
         minos.delete(m);
@@ -657,6 +679,8 @@
   }
 
   function clearTankerRescues() {
+    stopLeafCarrySound();
+
     [...tankerRescues].forEach((obj) => {
       if (obj.mino) {
         clearMinoStars(obj.mino);
@@ -837,8 +861,7 @@
       antObj.el.style.left = `${antObj.x}px`;
 
       const sway = Math.sin(now * 0.012 + antObj.x * 0.03) * 0.4;
-      antObj.el.style.transform =
-        `translate(${Math.sin(now * 0.02) * 0.5}px, ${sway}px)`;
+      antObj.el.style.transform = `translate(${Math.sin(now * 0.02) * 0.5}px, ${sway}px)`;
 
       if (now - antObj.lastFrameAt >= antObj.frameInterval) {
         antObj.frame = antObj.frame === 0 ? 1 : 0;
@@ -1411,8 +1434,11 @@
   function getMinoStarAnchor(m) {
     const angle = m.angle || Math.PI / 2;
 
-    const localX = 25;
-    const localY = -15;
+    const canvasRect = canvas.getBoundingClientRect();
+    const isMobileView = canvasRect.width <= 430;
+
+    const localX = isMobileView ? 18 : 25;
+    const localY = isMobileView ? -26 : -15;
 
     const cos = Math.cos(angle);
     const sin = Math.sin(angle);
@@ -1610,6 +1636,7 @@
         m.position.y > worldHeight + 220
       ) {
         clearMinoStars(m);
+        stopMinoMove();
 
         if (m.rope) World.remove(matterWorld, m.rope);
         if (m.carryRope) World.remove(matterWorld, m.carryRope);
@@ -1939,6 +1966,9 @@
     stopObstacleLeafLoop();
     clearObstacleLeaves();
     startObstacleLeafLoop();
+
+    stopMinoMove();
+    stopLeafCarrySound();
 
     if (minoFxLayer) {
       minoFxLayer.innerHTML = "";

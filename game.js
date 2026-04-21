@@ -52,7 +52,7 @@
   // デバッグ
   // true ならレディ救助を毎回強制発火
   // =========================================================
-  const DEBUG_FORCE_LADY = true;
+  const DEBUG_FORCE_LADY = false;
 
   function updateGauge(score) {
     if (!gaugeFillEl) return;

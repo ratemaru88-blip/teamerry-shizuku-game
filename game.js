@@ -381,7 +381,7 @@
     el.src = LADY_TEX;
     el.alt = "lady rescue";
     el.style.position = "absolute";
-    el.style.width = "48px";
+    el.style.width = "34px";
     el.style.height = "auto";
     el.style.pointerEvents = "none";
     el.style.zIndex = "26";
@@ -479,13 +479,13 @@
           Body.setAngle(m, -0.12 + Math.sin(now * 0.004 + lady.swaySeed) * 0.05);
 
           if (now >= (lady.heartNextAt || 0)) {
-            const heartWorldX = lady.x + lady.carryOffsetX * 0.5;
-            const heartWorldY = lady.y + lady.carryOffsetY - 6;
-            const heartScreen = worldToOverlayPoint(heartWorldX, heartWorldY);
+  const heartWorldX = lady.x + 14;
+  const heartWorldY = lady.y - 10;
+  const heartScreen = worldToOverlayPoint(heartWorldX, heartWorldY);
 
-            spawnLadyHeart(heartScreen.x, heartScreen.y);
-            lady.heartNextAt = now + 220 + Math.random() * 180;
-          }
+  spawnLadyHeart(heartScreen.x, heartScreen.y);
+  lady.heartNextAt = now + 220 + Math.random() * 180;
+}
         }
 
         if (lady.y < -90) {

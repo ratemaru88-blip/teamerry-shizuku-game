@@ -48,6 +48,12 @@
     return;
   }
 
+  // =========================================================
+  // デバッグ切り替え
+  // true にすると KO 後の救助が毎回レディになります
+  // =========================================================
+  const DEBUG_FORCE_LADY = true;
+
   function updateGauge(score) {
     if (!gaugeFillEl) return;
     const p = Math.max(0, Math.min(1, score / 260));
@@ -321,6 +327,50 @@
 
   const ladies = new Set();
 
+  function spawnLadyHeart(x, y) {
+    const layer = minoFxLayer || antsLayer;
+    if (!layer) return;
+
+    const heart = document.createElement("div");
+    heart.textContent = "❤";
+    heart.style.position = "absolute";
+    heart.style.left = `${x}px`;
+    heart.style.top = `${y}px`;
+    heart.style.transform = "translate(-50%, -50%)";
+    heart.style.fontSize = `${10 + Math.random() * 6}px`;
+    heart.style.color = "rgba(255, 170, 190, 0.85)";
+    heart.style.pointerEvents = "none";
+    heart.style.zIndex = "28";
+    heart.style.textShadow = "0 1px 2px rgba(255,255,255,0.35)";
+    heart.style.opacity = "0.9";
+
+    layer.appendChild(heart);
+
+    const startX = x;
+    const driftX = (Math.random() - 0.5) * 18;
+    const rise = 18 + Math.random() * 16;
+    const life = 700 + Math.random() * 300;
+    const start = performance.now();
+
+    function tick(now) {
+      const t = Math.min(1, (now - start) / life);
+      const ease = 1 - Math.pow(1 - t, 2);
+
+      heart.style.left = `${startX + driftX * ease}px`;
+      heart.style.top = `${y - rise * ease}px`;
+      heart.style.opacity = `${0.9 * (1 - t)}`;
+      heart.style.transform = `translate(-50%, -50%) scale(${1 + t * 0.25})`;
+
+      if (t < 1) {
+        requestAnimationFrame(tick);
+      } else if (heart.parentNode) {
+        heart.parentNode.removeChild(heart);
+      }
+    }
+
+    requestAnimationFrame(tick);
+  }
+
   function spawnLadyRescue(mino) {
     if (!mino || mino.rescueFinished) return null;
     if (!minoFxLayer && !antsLayer) return null;
@@ -350,6 +400,9 @@
       spawnAt: performance.now(),
       touchAt: 0,
       swaySeed: Math.random() * 1000,
+      carryOffsetX: 10,
+      carryOffsetY: 8,
+      heartNextAt: 0,
     };
 
     ladies.add(lady);
@@ -389,11 +442,23 @@
           lady.state = "touch";
           lady.touchAt = now;
           reviveMino(m, { force: true, silent: true });
+          m.state = "ladyCarry";
+          m.ladyCarry = true;
+          m.ladyPartnerId = lady.id;
         }
       } else if (lady.state === "touch") {
         lady.x =
           m.position.x + Math.sin(now * 0.005 + lady.swaySeed) * (LADY_CFG.swayPx * 0.7);
         lady.y = m.position.y - 24;
+
+        if (m && m.state === "ladyCarry") {
+          Body.setPosition(m, {
+            x: lady.x + lady.carryOffsetX,
+            y: lady.y + lady.carryOffsetY,
+          });
+          Body.setVelocity(m, { x: 0, y: 0 });
+          Body.setAngle(m, -0.08);
+        }
 
         if (now - lady.touchAt >= LADY_CFG.waitAfterTouchMs) {
           lady.state = "float";
@@ -402,14 +467,43 @@
         lady.y += LADY_CFG.floatSpeed;
         lady.x += Math.sin(now * 0.004 + lady.swaySeed) * 0.35;
 
+        if (m && m.state === "ladyCarry") {
+          Body.setPosition(m, {
+            x: lady.x + lady.carryOffsetX,
+            y: lady.y + lady.carryOffsetY,
+          });
+          Body.setVelocity(m, { x: 0, y: 0 });
+          Body.setAngle(m, -0.12 + Math.sin(now * 0.004 + lady.swaySeed) * 0.05);
+
+          if (now >= (lady.heartNextAt || 0)) {
+            const heartWorldX = lady.x + lady.carryOffsetX * 0.5;
+            const heartWorldY = lady.y + lady.carryOffsetY - 6;
+            const heartScreen = worldToOverlayPoint(heartWorldX, heartWorldY);
+
+            spawnLadyHeart(heartScreen.x, heartScreen.y);
+            lady.heartNextAt = now + 180 + Math.random() * 160;
+          }
+        }
+
         if (lady.y < -90) {
+          if (m && minos.has(m)) {
+            clearMinoStars(m);
+
+            if (m.rope) World.remove(matterWorld, m.rope);
+            if (m.carryRope) World.remove(matterWorld, m.carryRope);
+
+            World.remove(matterWorld, m);
+            minos.delete(m);
+          }
+
           removeLady(lady);
           return;
         }
       }
 
-      lady.el.style.left = `${lady.x}px`;
-      lady.el.style.top = `${lady.y}px`;
+      const ladyScreen = worldToOverlayPoint(lady.x, lady.y);
+      lady.el.style.left = `${ladyScreen.x}px`;
+      lady.el.style.top = `${ladyScreen.y}px`;
     });
   }
 
@@ -822,7 +916,7 @@
 
     mino.rescueStarted = true;
 
-    if (Math.random() < LADY_CFG.chance) {
+    if (DEBUG_FORCE_LADY || Math.random() < LADY_CFG.chance) {
       mino.ladyRescue = true;
       spawnLadyRescue(mino);
       return;
@@ -1457,6 +1551,8 @@
     mino.reviveAt = 0;
     mino.rescueAntIds = new Set();
     mino.ladyRescue = false;
+    mino.ladyCarry = false;
+    mino.ladyPartnerId = null;
 
     mino.spawnAt = performance.now();
     mino.windSeed = Math.random() * 1000;
@@ -1576,7 +1672,6 @@
     m._starEl = null;
   }
 
-  // ★追加：Matter座標 → DOM表示座標への変換
   function worldToOverlayPoint(x, y) {
     const rect = canvas.getBoundingClientRect();
 
@@ -1600,7 +1695,6 @@
     const angle = m.angle || 0;
 
     if (m.state === "ko") {
-      // KO中はスマホで少し強めに上左へ補正
       const localX = isMobileView ? -18 : -10;
       const localY = isMobileView ? -20 : -14;
 
@@ -1692,6 +1786,8 @@
     m._tapReactUntil = 0;
     m._reviveQueued = false;
     m.ladyRescue = false;
+    m.ladyCarry = false;
+    m.ladyPartnerId = null;
 
     if (m.render) {
       m.render.visible = true;
@@ -1810,10 +1906,7 @@
         minos.delete(m);
       }
 
-      if (
-        m.state !== "tanker" &&
-        m.position.y > worldHeight + 220
-      ) {
+      if (m.state !== "tanker" && m.position.y > worldHeight + 220) {
         clearMinoStars(m);
         stopMinoMove();
 
@@ -1962,6 +2055,11 @@
           Body.setAngle(m, 0);
         }
 
+        return;
+      }
+
+      if (m.state === "ladyCarry") {
+        stopMinoMove();
         return;
       }
 

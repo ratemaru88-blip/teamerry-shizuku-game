@@ -320,9 +320,9 @@
   const LADY_CFG = {
     chance: 0.06,
     descendSpeed: 1.25,
-    floatSpeed: -0.72,
+    floatSpeed: -0.6,
     swayPx: 10,
-    waitAfterTouchMs: 260,
+    waitAfterTouchMs: 360,
   };
 
   const ladies = new Set();

@@ -479,8 +479,8 @@
           Body.setAngle(m, -0.12 + Math.sin(now * 0.004 + lady.swaySeed) * 0.05);
 
           if (now >= (lady.heartNextAt || 0)) {
-  const heartWorldX = lady.x + 14;
-  const heartWorldY = lady.y - 10;
+  const heartWorldX = lady.x + 10 + (Math.random() - 0.5) * 10;
+  const heartWorldY = lady.y - 10 + (Math.random() - 0.5) * 4;
   const heartScreen = worldToOverlayPoint(heartWorldX, heartWorldY);
 
   spawnLadyHeart(heartScreen.x, heartScreen.y);

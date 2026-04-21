@@ -317,13 +317,44 @@
 
   const LADY_TEX = "assets/images/minomusi_L1.webp";
 
-  const LADY_CFG = {
-    chance: 0.06,
-    descendSpeed: 0.78,
-    floatSpeed: -0.62,
-    swayPx: 10,
-    waitAfterTouchMs: 380,
+  function spawnLadyRescue(mino) {
+  if (!mino || mino.rescueFinished) return null;
+  if (!minoFxLayer && !antsLayer) return null;
+
+  const layer = minoFxLayer || antsLayer;
+
+  const el = document.createElement("img");
+  el.src = LADY_TEX;
+  el.alt = "lady rescue";
+  el.style.position = "absolute";
+  el.style.width = "48px";
+  el.style.height = "auto";
+  el.style.pointerEvents = "none";
+  el.style.zIndex = "26";
+  el.style.transform = "translate(-50%, -50%)";
+  el.style.filter = "drop-shadow(0 2px 3px rgba(0,0,0,0.15))";
+
+  layer.appendChild(el);
+
+  const lady = {
+    id: `lady-${Math.random().toString(36).slice(2)}`,
+    el,
+    mino,
+    x: mino.position.x,
+    y: -56,
+    state: "descend",
+    spawnAt: performance.now(),
+    touchAt: 0,
+    swaySeed: Math.random() * 1000,
+    carryOffsetX: 6,
+    carryOffsetY: 6,
+    heartNextAt: 0,
+    baseX: mino.position.x,
   };
+
+  ladies.add(lady);
+  return lady;
+}
 
   const ladies = new Set();
 
@@ -421,92 +452,92 @@
     [...ladies].forEach(removeLady);
   }
 
-  function updateLadies() {
-    const now = performance.now();
+function updateLadies() {
+  const now = performance.now();
 
-    ladies.forEach((lady) => {
-      const m = lady.mino;
-      if (!m) {
+  ladies.forEach((lady) => {
+    const m = lady.mino;
+    if (!m) {
+      removeLady(lady);
+      return;
+    }
+
+    if (lady.state === "descend") {
+      lady.y += LADY_CFG.descendSpeed;
+      lady.x =
+        m.position.x + Math.sin(now * 0.004 + lady.swaySeed) * (LADY_CFG.swayPx * 0.45);
+
+      const targetY = m.position.y - 20;
+      if (lady.y >= targetY) {
+        lady.y = targetY;
+        lady.state = "touch";
+        lady.touchAt = now;
+        lady.baseX = lady.x;
+
+        reviveMino(m, { force: true, silent: true });
+        m.state = "ladyCarry";
+        m.ladyCarry = true;
+        m.ladyPartnerId = lady.id;
+      }
+    } else if (lady.state === "touch") {
+      lady.x = lady.baseX + Math.sin(now * 0.005 + lady.swaySeed) * 1.5;
+      lady.y = m.position.y - 20;
+
+      if (m && m.state === "ladyCarry") {
+        Body.setPosition(m, {
+          x: lady.x + lady.carryOffsetX,
+          y: lady.y + lady.carryOffsetY,
+        });
+        Body.setVelocity(m, { x: 0, y: 0 });
+        Body.setAngle(m, -0.08);
+      }
+
+      if (now - lady.touchAt >= LADY_CFG.waitAfterTouchMs) {
+        lady.state = "float";
+      }
+    } else if (lady.state === "float") {
+      lady.y += LADY_CFG.floatSpeed;
+      lady.x = lady.baseX + Math.sin(now * 0.004 + lady.swaySeed) * 3;
+
+      if (m && m.state === "ladyCarry") {
+        Body.setPosition(m, {
+          x: lady.x + lady.carryOffsetX,
+          y: lady.y + lady.carryOffsetY,
+        });
+        Body.setVelocity(m, { x: 0, y: 0 });
+        Body.setAngle(m, -0.12 + Math.sin(now * 0.004 + lady.swaySeed) * 0.05);
+
+        if (now >= (lady.heartNextAt || 0)) {
+          const heartWorldX = lady.x + lady.carryOffsetX * 0.5;
+          const heartWorldY = lady.y + lady.carryOffsetY - 6;
+          const heartScreen = worldToOverlayPoint(heartWorldX, heartWorldY);
+
+          spawnLadyHeart(heartScreen.x, heartScreen.y);
+          lady.heartNextAt = now + 220 + Math.random() * 180;
+        }
+      }
+
+      if (lady.y < -90) {
+        if (m && minos.has(m)) {
+          clearMinoStars(m);
+
+          if (m.rope) World.remove(matterWorld, m.rope);
+          if (m.carryRope) World.remove(matterWorld, m.carryRope);
+
+          World.remove(matterWorld, m);
+          minos.delete(m);
+        }
+
         removeLady(lady);
         return;
       }
+    }
 
-      if (lady.state === "descend") {
-        lady.y += LADY_CFG.descendSpeed;
-        lady.x =
-          m.position.x + Math.sin(now * 0.004 + lady.swaySeed) * LADY_CFG.swayPx;
-
-        const targetY = m.position.y - 24;
-        if (lady.y >= targetY) {
-          lady.y = targetY;
-          lady.state = "touch";
-          lady.touchAt = now;
-          reviveMino(m, { force: true, silent: true });
-          m.state = "ladyCarry";
-          m.ladyCarry = true;
-          m.ladyPartnerId = lady.id;
-        }
-      } else if (lady.state === "touch") {
-        lady.x =
-          m.position.x + Math.sin(now * 0.005 + lady.swaySeed) * (LADY_CFG.swayPx * 0.7);
-        lady.y = m.position.y - 24;
-
-        if (m && m.state === "ladyCarry") {
-          Body.setPosition(m, {
-            x: lady.x + lady.carryOffsetX,
-            y: lady.y + lady.carryOffsetY,
-          });
-          Body.setVelocity(m, { x: 0, y: 0 });
-          Body.setAngle(m, -0.08);
-        }
-
-        if (now - lady.touchAt >= LADY_CFG.waitAfterTouchMs) {
-          lady.state = "float";
-        }
-      } else if (lady.state === "float") {
-        lady.y += LADY_CFG.floatSpeed;
-        lady.x += Math.sin(now * 0.004 + lady.swaySeed) * 0.35;
-
-        if (m && m.state === "ladyCarry") {
-          Body.setPosition(m, {
-            x: lady.x + lady.carryOffsetX,
-            y: lady.y + lady.carryOffsetY,
-          });
-          Body.setVelocity(m, { x: 0, y: 0 });
-          Body.setAngle(m, -0.12 + Math.sin(now * 0.004 + lady.swaySeed) * 0.05);
-
-          if (now >= (lady.heartNextAt || 0)) {
-            const heartWorldX = lady.x + lady.carryOffsetX * 0.5;
-            const heartWorldY = lady.y + lady.carryOffsetY - 6;
-            const heartScreen = worldToOverlayPoint(heartWorldX, heartWorldY);
-
-            spawnLadyHeart(heartScreen.x, heartScreen.y);
-            lady.heartNextAt = now + 180 + Math.random() * 160;
-          }
-        }
-
-        if (lady.y < -90) {
-          if (m && minos.has(m)) {
-            clearMinoStars(m);
-
-            if (m.rope) World.remove(matterWorld, m.rope);
-            if (m.carryRope) World.remove(matterWorld, m.carryRope);
-
-            World.remove(matterWorld, m);
-            minos.delete(m);
-          }
-
-          removeLady(lady);
-          return;
-        }
-      }
-
-      const ladyScreen = worldToOverlayPoint(lady.x, lady.y);
-      lady.el.style.left = `${ladyScreen.x}px`;
-      lady.el.style.top = `${ladyScreen.y}px`;
-    });
-  }
-
+    const ladyScreen = worldToOverlayPoint(lady.x, lady.y);
+    lady.el.style.left = `${ladyScreen.x}px`;
+    lady.el.style.top = `${ladyScreen.y}px`;
+  });
+}
   /* =========================================================
      葉っぱ音
   ========================================================= */

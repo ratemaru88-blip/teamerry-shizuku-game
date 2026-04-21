@@ -381,7 +381,7 @@
     el.src = LADY_TEX;
     el.alt = "lady rescue";
     el.style.position = "absolute";
-    el.style.width = "34px";
+    el.style.width = "29px";
     el.style.height = "auto";
     el.style.pointerEvents = "none";
     el.style.zIndex = "26";

@@ -83,6 +83,7 @@
     };
 
     let audioUnlocked = false;
+    let audioPaused = false;
     function unlockAudioOnce() {
       if (audioUnlocked) return;
       audioUnlocked = true;
@@ -106,12 +107,22 @@
     }
 
     function playRandom(list) {
+      if (audioPaused) return;
       if (!list || !list.length) return;
       const a = list[(Math.random() * list.length) | 0];
       try {
         a.currentTime = 0;
         a.play();
       } catch (_) {}
+    }
+
+    function stopAllSounds() {
+      [...sounds.drop, ...sounds.merge].forEach((a) => {
+        try {
+          a.pause();
+          a.currentTime = 0;
+        } catch (_) {}
+      });
     }
 
     const engine = Engine.create();
@@ -574,6 +585,9 @@
       } else {
         addScoreForStage(3);
         playRandom(sounds.merge);
+        if (typeof cfg.onLargeMerge === 'function') {
+          cfg.onLargeMerge({ charIndex: bodyA.charIndex, x: centerX, y: centerY });
+        }
       }
     }
 
@@ -849,9 +863,25 @@
         return newBody;
       },
 
+      addScore(points) {
+        if (typeof points !== 'number' || points <= 0) return;
+        score += points;
+        updateScoreUI();
+      },
+
+      pauseAudio() {
+        audioPaused = true;
+        stopAllSounds();
+      },
+
+      resumeAudio() {
+        audioPaused = false;
+      },
+
       debug: {
         engine,
         world,
+        runner,
         droplets,
         config: cfg,
         cupRimY: CUP_RIM_Y,

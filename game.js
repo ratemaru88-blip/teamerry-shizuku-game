@@ -2,6 +2,7 @@
   "use strict";
 
   const canvas = document.getElementById("gameCanvas");
+  const gameFrameEl = document.querySelector(".game-frame");
   const leafWrapperEl = document.getElementById("leafWrapper");
   const previewDropletEl = document.getElementById("previewDroplet");
   const cupHandleEl = document.getElementById("cupHandle");
@@ -98,6 +99,87 @@
   hideGameOver();
   handleScoreChange(0);
 
+  /* =========================================================
+     ボーナスゲームトリガー
+  ========================================================= */
+  let bonusActive = false;
+
+  function pauseAudioElement(audio) {
+    if (!audio) return;
+    try {
+      audio.pause();
+      audio.currentTime = 0;
+    } catch (_) {}
+  }
+
+  function stopNormalGameAudio() {
+    dropletEngine.pauseAudio?.();
+    stopMinoMove();
+    stopLeafCarrySound();
+
+    Object.values(minoSounds).forEach(pauseAudioElement);
+    Object.values(antSounds).forEach(pauseAudioElement);
+
+    bees.forEach((bee) => stopBeeBuzz(bee));
+    Object.values(beeSounds).forEach((list) => {
+      if (Array.isArray(list)) list.forEach(pauseAudioElement);
+    });
+  }
+
+  function pauseNormalGameForBonus() {
+    gameFrameEl?.classList.add("bonus-running");
+
+    const { Runner } = window.Matter;
+    const dbg = dropletEngine.debug;
+    if (Runner && dbg && dbg.runner) Runner.stop(dbg.runner);
+
+    stopAntLoop();
+    stopBeeTimer();
+    stopMinoTimer();
+    stopObstacleLeafLoop();
+    stopNormalGameAudio();
+  }
+
+  function resumeNormalGameAfterBonus() {
+    gameFrameEl?.classList.remove("bonus-running");
+    dropletEngine.resumeAudio?.();
+
+    const { Runner } = window.Matter;
+    const dbg = dropletEngine.debug;
+    const state = dropletEngine.getState();
+    if (Runner && dbg && dbg.runner && !state.gameOver) {
+      Runner.run(dbg.runner, dbg.engine);
+      scheduleNextAnt();
+      startBeeLoop();
+      startMinoLoop();
+      startObstacleLeafLoop();
+    }
+  }
+
+  function handleLargeMerge({ charIndex }) {
+    if (bonusActive) return;
+    if (!window.BonusGame) return;
+
+    bonusActive = true;
+
+    setTimeout(() => {
+      pauseNormalGameForBonus();
+
+      const started = window.BonusGame.start(charIndex, (bonusPoints) => {
+        bonusActive = false;
+        resumeNormalGameAfterBonus();
+
+        /* ボーナスポイント加算 */
+        if (bonusPoints > 0) dropletEngine.addScore(bonusPoints);
+      });
+
+      if (!started) {
+        bonusActive = false;
+        resumeNormalGameAfterBonus();
+      }
+    }, 0);
+  }
+
   const dropletEngine = window.createDropletEngine({
     canvas,
     leafWrapperEl,
@@ -110,9 +192,23 @@
     resetBtnEl,
     onScoreChange: handleScoreChange,
     onGameOver: handleGameOver,
+    onLargeMerge: handleLargeMerge,
   });
 
   dropletEngine.start();
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key.toLowerCase() !== "b") return;
+    if (e.repeat) return;
+
+    const state = dropletEngine.getState();
+    if (state.gameOver || bonusActive) return;
+
+    handleLargeMerge({
+      charIndex:
+        typeof state.nextCharIndex === "number" ? state.nextCharIndex : 0,
+    });
+  });
 
   const { Bodies, Body, World, Events, Constraint } = window.Matter;
   const matterWorld = dropletEngine.debug.world;
@@ -2238,6 +2334,15 @@
   ========================================================= */
 
   function fullResetExtras() {
+    /* ボーナスゲームが動いていれば強制終了 */
+    if (window.BonusGame && window.BonusGame.isRunning()) {
+      bonusActive = false;
+      window.BonusGame.stop();
+      resumeNormalGameAfterBonus();
+    }
+    gameFrameEl?.classList.remove("bonus-running");
+    dropletEngine.resumeAudio?.();
+
     stopAntLoop();
     clearAnts();
     clearTankerRescues();

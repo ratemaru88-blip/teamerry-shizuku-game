@@ -317,7 +317,7 @@ body {
   z-index: 50;
 }
 
-.reset-btn, .help-btn {
+.reset-btn, .help-btn, .bonus-test-btn {
   padding: 6px 12px;
   border-radius: 999px;
   border: none;
@@ -337,9 +337,27 @@ body {
   color: #4c5a45;
   
 }
-.reset-btn:active, .help-btn:active {
+.bonus-test-btn {
+  display: none;
+  min-width: 74px;
+  height: 34px;
+  padding: 0 12px;
+  background: #f6d24f;
+  color: #4b3513;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+.reset-btn:active, .help-btn:active, .bonus-test-btn:active {
   transform: translateY(1px);
   box-shadow: 0 3px 8px rgba(0,0,0,0.30);
+}
+
+@media (max-width: 768px) {
+  .bonus-test-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
 
 /* =======================

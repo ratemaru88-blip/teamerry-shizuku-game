@@ -17,7 +17,12 @@
 
   const BG_SRC     = 'assets/images/Bonus Game_haikei.webp';
   const LOGO_SRC   = 'assets/images/BonusGame_logo.webp';
+  const SETUMEI_SRC = 'assets/images/Bonus_setumei.webp';
   const ACORN_SRC  = 'assets/images/donguri_1.webp';
+  const GOLD_ACORN_SRC = 'assets/images/G_donguri.webp';
+  const LEAF_SRC    = 'assets/images/happa1.webp';
+  const MUSHROOM_SRC = 'assets/images/dokukinoko.webp';
+  const CATERPILLAR_SRC = 'assets/images/aomusi.webp';
   const BASKET_SRC = 'assets/images/kago.webp';
   const GROUND_SRC = 'assets/images/G_anderbar.webp';
   const HAT_R_SRC  = 'assets/images/ari_hata_R.webp';
@@ -40,6 +45,11 @@
     kaisi    : mkAudio('assets/sounds/bonus_kaisi.mp3',    false, 0.8),
     bgm      : mkAudio('assets/sounds/BonusGame_BGM.mp3',  true,  0.5),
     get      : mkAudio('assets/sounds/donguri_get_B.mp3',  false, 0.7),
+    gold     : mkAudio('assets/sounds/G_donguri.mp3',      false, 0.8),
+    leaf     : mkAudio('assets/sounds/happa.mp3',          false, 0.75),
+    mushroom : mkAudio('assets/sounds/dokukinoko.mp3',     false, 0.8),
+    caterpillar: mkAudio('assets/sounds/aomusi.mp3',       false, 0.8),
+    perfect  : mkAudio('assets/sounds/perfect.mp3',        false, 0.9),
     sippai   : mkAudio('assets/sounds/donguri_sippai.mp3', false, 0.7),
     hoissuru : mkAudio('assets/sounds/hoissuru.mp3',       false, 0.7),
     march    : mkAudio('assets/sounds/leaf_soft.mp3',      true,  0.22),
@@ -48,6 +58,12 @@
   function playSnd(key) {
     const s = SND[key]; if (!s) return;
     try { s.currentTime = 0; s.play(); } catch (_) {}
+  }
+  function playSndClone(key, vol) {
+    const s = SND[key]; if (!s) return;
+    const c = s.cloneNode(true);
+    if (typeof vol === 'number') c.volume = vol;
+    try { c.play(); } catch (_) {}
   }
   function stopSnd(key) {
     const s = SND[key]; if (!s) return;
@@ -62,15 +78,61 @@
   ===================================================== */
   const TOTAL       = 20;
   const BONUS_PT    = 50;
-  const ACORN_W     = 25;
-  const BASKET_W    = 37;
-  const BASKET_H    = 15;
+  const GOLD_PT     = 200;
+  const BAD_ITEM_PT = -10;
+  const ACORN_W     = 25 * 1.3;
+  const BASKET_W    = 37 * 1.5;
+  const BASKET_H    = 15 * 1.5;
   const GROUND_W_RATIO = 0.92;
   const GROUND_H    = 38;
   const GROUND_Y_OFFSET = -8;
   const BASKET_TO_GROUND_GAP = 44;
-  const FALL_SPEED  = 3.2;
+  const FALL_SPEED  = 2.6;
+  const GAME_OVER_DROP_SPEED = 7.5;
   const SPAWN_MS    = 460;
+  const FREEZE_MS   = 2000;
+  const SETUMEI_SEEN_KEY = 'teamerry_bonus_setumei_seen';
+
+  const FALL_ITEMS = {
+    acorn: {
+      src: ACORN_SRC,
+      width: ACORN_W,
+      points: BONUS_PT,
+      sound: 'get',
+      acorn: true,
+      spin: true,
+    },
+    gold: {
+      src: GOLD_ACORN_SRC,
+      width: ACORN_W * 1.08,
+      points: GOLD_PT,
+      sound: 'gold',
+      acorn: true,
+      spin: true,
+    },
+    leaf: {
+      src: LEAF_SRC,
+      width: 36,
+      fallSpeed: 0.72,
+      points: BAD_ITEM_PT,
+      sound: 'leaf',
+      sway: true,
+      spin: true,
+    },
+    mushroom: {
+      src: MUSHROOM_SRC,
+      width: 34,
+      points: 0,
+      sound: 'mushroom',
+      freeze: true,
+    },
+    caterpillar: {
+      src: CATERPILLAR_SRC,
+      width: 38,
+      points: BAD_ITEM_PT,
+      sound: 'caterpillar',
+    },
+  };
 
   /* =====================================================
      状態変数
@@ -78,6 +140,7 @@
   let _phase    = 'idle';
   let _overlay  = null;
   let _charIdx  = 0;
+  let _burstOrigin = null;
   let _onFinish = null;
 
   // playing
@@ -89,8 +152,11 @@
   let _ctrEl     = null;
   let _iconsEl   = null;
   let _acorns    = [];
+  let _fallQueue = [];
   let _spawned   = 0;
   let _caught    = 0;
+  let _bonusPts  = 0;
+  let _basketFrozenUntil = 0;
   let _W         = 0;
   let _H         = 0;
   let _baskX     = 0;
@@ -139,8 +205,43 @@
     _phase = 'charPopup';
     ensureOverlay();
     clearOverlay();
-    setOverlayStyle('rgba(10,35,15,0.93)', 'center');
+    setOverlayStyle('transparent', 'center');
     showOverlay(true);
+
+    const flash = document.createElement('div');
+    flash.className = 'bns-start-flash';
+    _overlay.appendChild(flash);
+
+    const burst = document.createElement('div');
+    burst.className = 'bns-start-burst';
+    const burstPoint = _getBurstPoint();
+    burst.style.left = `${burstPoint.x}px`;
+    burst.style.top = `${burstPoint.y}px`;
+    const burstClasses = [
+      'bns-burst-star',
+      'bns-burst-droplet',
+      'bns-burst-confetti',
+      'bns-burst-glow',
+      'bns-burst-dot',
+    ];
+    const burstColors = ['#ffe56a', '#ff9fb5', '#8fd8ff', '#9fe7b6', '#f7c47a', '#fff3c2'];
+
+    for (let i = 0; i < 46; i++) {
+      const p = document.createElement('span');
+      const angle = (Math.PI * 2 * i) / 46 + (Math.random() - 0.5) * 0.48;
+      const dist = 48 + Math.random() * 118;
+      const size = 3 + Math.random() * 8;
+      p.className = burstClasses[i % burstClasses.length];
+      p.style.setProperty('--dx', `${Math.cos(angle) * dist}px`);
+      p.style.setProperty('--dy', `${Math.sin(angle) * dist}px`);
+      p.style.setProperty('--size', `${size}px`);
+      p.style.setProperty('--rot', `${Math.random() * 260 - 130}deg`);
+      p.style.setProperty('--delay', `${Math.random() * 0.12}s`);
+      p.style.setProperty('--burst-color', burstColors[i % burstColors.length]);
+      if (p.className === 'bns-burst-star') p.textContent = '★';
+      burst.appendChild(p);
+    }
+    _overlay.appendChild(burst);
 
     const img = document.createElement('img');
     img.src = TOBIDASU[_charIdx] ?? TOBIDASU[0];
@@ -151,6 +252,31 @@
     setTimeout(() => { if (_phase === 'charPopup') phaseLogo(); }, 1500);
   }
 
+  function _getBurstPoint() {
+    const frame = getGameFrame();
+    const canvas = document.getElementById('gameCanvas');
+    const frameRect = frame.getBoundingClientRect();
+
+    if (
+      _burstOrigin &&
+      canvas &&
+      canvas.width &&
+      canvas.height &&
+      frameRect.width &&
+      frameRect.height
+    ) {
+      const canvasRect = canvas.getBoundingClientRect();
+      const x = canvasRect.left - frameRect.left + (_burstOrigin.x / canvas.width) * canvasRect.width;
+      const y = canvasRect.top - frameRect.top + (_burstOrigin.y / canvas.height) * canvasRect.height;
+      return {
+        x: Math.max(24, Math.min(frameRect.width - 24, x)),
+        y: Math.max(24, Math.min(frameRect.height - 24, y)),
+      };
+    }
+
+    return { x: frameRect.width * 0.5, y: frameRect.height * 0.44 };
+  }
+
   /* =====================================================
      フェーズ 2 ― ロゴ表示
   ===================================================== */
@@ -159,13 +285,51 @@
     clearOverlay();
     setOverlayStyle('rgba(10,35,15,0.93)', 'center');
 
+    _addRewardSparkles(_overlay, 'bns-logo-sparkles', 22);
+
     const img = document.createElement('img');
     img.src = LOGO_SRC;
     img.className = 'bns-logo-img';
     _overlay.appendChild(img);
 
     playSnd('kaisi');
-    setTimeout(() => { if (_phase === 'logo') phasePlay(); }, 1700);
+    setTimeout(() => {
+      if (_phase !== 'logo') return;
+      if (_shouldShowSetumei()) {
+        _markSetumeiSeen();
+        phaseSetumei();
+        return;
+      }
+      phasePlay();
+    }, 1700);
+  }
+
+  function _shouldShowSetumei() {
+    try {
+      return localStorage.getItem(SETUMEI_SEEN_KEY) !== '1';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function _markSetumeiSeen() {
+    try {
+      localStorage.setItem(SETUMEI_SEEN_KEY, '1');
+    } catch (_) {}
+  }
+
+  function phaseSetumei() {
+    _phase = 'setumei';
+    clearOverlay();
+    setOverlayStyle('rgba(10,35,15,0.93)', 'center');
+    _addRewardSparkles(_overlay, 'bns-logo-sparkles', 18);
+
+    const img = document.createElement('img');
+    img.src = SETUMEI_SRC;
+    img.className = 'bns-setumei-img';
+    _overlay.appendChild(img);
+
+    setTimeout(() => { if (_phase === 'setumei') phasePlay(); }, 2000);
   }
 
   /* =====================================================
@@ -174,6 +338,9 @@
   function phasePlay() {
     _phase = 'playing';
     _acorns = []; _spawned = 0; _caught = 0;
+    _fallQueue = _buildFallQueue();
+    _bonusPts = 0;
+    _basketFrozenUntil = 0;
     _ended = false; _lastSpawn = 0;
 
     clearOverlay();
@@ -189,6 +356,8 @@
     bg.src = BG_SRC;
     bg.className = 'bns-bg';
     _playEl.appendChild(bg);
+
+    _addRewardSparkles(_playEl, 'bns-play-sparkles', 16);
 
     /* UI（上部） */
     const ui = document.createElement('div');
@@ -268,10 +437,30 @@
   function _onPtr(e) {
     if (_phase !== 'playing' || !_playEl) return;
     if (_ended) return;
+    if (performance.now() < _basketFrozenUntil) return;
     const r = _playEl.getBoundingClientRect();
     const rx = e.clientX - r.left;
     _baskX = Math.max(BASKET_W / 2, Math.min(_W - BASKET_W / 2, rx));
     _updateCatcher();
+  }
+
+  function _addRewardSparkles(parent, className, count) {
+    const layer = document.createElement('div');
+    layer.className = className;
+
+    for (let i = 0; i < count; i++) {
+      const s = document.createElement('span');
+      s.className = i % 5 === 0 ? 'bns-reward-star' : 'bns-reward-sparkle';
+      s.style.left = `${8 + Math.random() * 84}%`;
+      s.style.top = `${8 + Math.random() * 76}%`;
+      s.style.setProperty('--sparkle-size', `${3 + Math.random() * 7}px`);
+      s.style.setProperty('--sparkle-delay', `${Math.random() * 1.4}s`);
+      s.style.setProperty('--sparkle-drift', `${-8 + Math.random() * 16}px`);
+      if (s.className === 'bns-reward-star') s.textContent = '★';
+      layer.appendChild(s);
+    }
+
+    parent.appendChild(layer);
   }
 
   function _updateCatcher() {
@@ -289,16 +478,47 @@
     }
   }
 
-  function _spawnAcorn() {
-    const margin = ACORN_W + 8;
+  function _buildFallQueue() {
+    const queue = [
+      ...Array.from({ length: TOTAL - 1 }, () => 'acorn'),
+      'gold',
+      'leaf', 'leaf', 'leaf',
+      'mushroom', 'mushroom', 'mushroom',
+      'caterpillar', 'caterpillar', 'caterpillar',
+    ];
+
+    for (let i = queue.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [queue[i], queue[j]] = [queue[j], queue[i]];
+    }
+    return queue;
+  }
+
+  function _spawnItem() {
+    const type = _fallQueue[_spawned] || 'acorn';
+    const def = FALL_ITEMS[type] || FALL_ITEMS.acorn;
+    const w = def.width;
+    const margin = w + 16;
     const x = margin + Math.random() * (_W - margin * 2);
     const el = document.createElement('img');
-    el.src = ACORN_SRC;
-    el.className = 'bns-acorn';
-    el.style.left = `${x - ACORN_W / 2}px`;
-    el.style.top  = `-${ACORN_W}px`;
+    el.src = def.src;
+    el.className = `bns-acorn bns-fall-${type}`;
+    el.style.width = `${w}px`;
+    el.style.left = `${x - w / 2}px`;
+    el.style.top  = `-${w}px`;
+    const rot = Math.random() * 360;
+    const rotSpeed = def.spin ? (Math.random() * 0.35 + 0.35) * (Math.random() < 0.5 ? -1 : 1) : 0;
+    el.style.transform = `rotate(${rot}deg)`;
     _acornLyr.appendChild(el);
-    _acorns.push({ el, x, y: -ACORN_W, state: 'fall' });
+    _acorns.push({
+      el, type, def,
+      x, xBase: x, y: -w, w,
+      rot, rotSpeed,
+      swayPhase: Math.random() * Math.PI * 2,
+      swayAmp: def.sway ? 18 + Math.random() * 10 : 0,
+      swaySpeed: def.sway ? 0.0022 + Math.random() * 0.0012 : 0,
+      state: 'fall',
+    });
     _spawned++;
   }
 
@@ -314,14 +534,29 @@
     });
   }
 
+  function _handleCatch(ac, now) {
+    if (ac.def.acorn) {
+      _caught++;
+      _updateIcons();
+    }
+
+    _bonusPts += ac.def.points || 0;
+    playSndClone(ac.def.sound, 0.75);
+
+    if (ac.def.freeze) {
+      _basketFrozenUntil = Math.max(_basketFrozenUntil, now) + FREEZE_MS;
+      if (_basketEl) _basketEl.classList.add('bns-basket-frozen');
+    }
+  }
+
   function _gameLoop(now) {
     if (_phase !== 'playing') return;
 
     /* スポーン */
-    if (_spawned < TOTAL) {
+    if (!_ended && _spawned < _fallQueue.length) {
       if (!_lastSpawn || now - _lastSpawn >= SPAWN_MS) {
         _lastSpawn = now;
-        _spawnAcorn();
+        _spawnItem();
       }
     }
 
@@ -329,36 +564,50 @@
     for (const ac of _acorns) {
       if (ac.state !== 'fall') continue;
 
-      ac.y += FALL_SPEED;
-      ac.el.style.top = `${ac.y - ACORN_W / 2}px`;
+      const fallSpeed = ac.def.fallSpeed || FALL_SPEED;
+      ac.y += _ended ? Math.max(fallSpeed, GAME_OVER_DROP_SPEED) : fallSpeed;
+      ac.rot += ac.rotSpeed;
+      if (ac.swayAmp && !_ended) {
+        ac.x = ac.xBase + Math.sin(now * ac.swaySpeed + ac.swayPhase) * ac.swayAmp;
+      }
+      ac.el.style.left = `${ac.x - ac.w / 2}px`;
+      ac.el.style.top = `${ac.y - ac.w / 2}px`;
+      ac.el.style.transform = `rotate(${ac.rot}deg)`;
 
-      const acBottom = ac.y + ACORN_W / 2;
+      const acBottom = ac.y + ac.w / 2;
 
       /* カゴ衝突 */
       if (
         !_ended &&
+        now >= _basketFrozenUntil &&
         acBottom >= _baskY &&
         acBottom <= _baskY + BASKET_H * 0.6 &&
-        ac.x - ACORN_W / 2 < _baskX + BASKET_W / 2 &&
-        ac.x + ACORN_W / 2 > _baskX - BASKET_W / 2
+        ac.x - ac.w / 2 < _baskX + BASKET_W / 2 &&
+        ac.x + ac.w / 2 > _baskX - BASKET_W / 2
       ) {
         ac.state = 'caught';
         ac.el.style.display = 'none';
-        _caught++;
-        _updateIcons();
-        const s = SND.get.cloneNode(true);
-        s.volume = 0.7;
-        try { s.play(); } catch (_) {}
+        _handleCatch(ac, now);
         continue;
       }
 
       /* 地面到達 → ミス */
       if (acBottom >= _gndY) {
+        ac.y = _gndY - ac.w / 2;
+        ac.el.style.top = `${ac.y - ac.w / 2}px`;
+
+        if (!ac.def.acorn) {
+          ac.state = 'missed';
+          ac.el.style.display = 'none';
+          continue;
+        }
+
         ac.state = 'ground';
-        ac.y = _gndY - ACORN_W / 2;
-        ac.el.style.top = `${ac.y - ACORN_W / 2}px`;
         if (!_ended) {
           _ended = true;
+          _spawned = _fallQueue.length;
+          _basketFrozenUntil = 0;
+          if (_basketEl) _basketEl.classList.remove('bns-basket-frozen');
           _overlay.removeEventListener('pointermove', _onPtr);
           _overlay.removeEventListener('pointerdown', _onPtr);
           stopSnd('bgm');
@@ -368,7 +617,15 @@
     }
 
     /* 全解決チェック */
-    const allDone = _spawned >= TOTAL && _acorns.every(a => a.state !== 'fall');
+    if (_basketEl && _basketFrozenUntil && now >= _basketFrozenUntil) {
+      _basketFrozenUntil = 0;
+      _basketEl.classList.remove('bns-basket-frozen');
+    }
+
+    const allDone =
+      _spawned >= _fallQueue.length &&
+      _acorns.every(a => a.state !== 'fall') &&
+      now >= _basketFrozenUntil;
     if (allDone) {
       cancelAnimationFrame(_raf);
       _overlay.removeEventListener('pointermove', _onPtr);
@@ -510,7 +767,10 @@
           if (ant.x + 14 >= ant.targetAcorn.x) {
             ant.acornPicked = true;
             ant.targetAcorn.el.style.display = 'none';
-            if (ant.carry) ant.carry.style.display = 'block';
+            if (ant.carry) {
+              ant.carry.src = ant.targetAcorn.def.src;
+              ant.carry.style.display = 'block';
+            }
           }
         }
 
@@ -526,7 +786,7 @@
             const showCount = Math.min(ant.pileAcorns.length, 10);
             for (let j = 0; j < showCount; j++) {
               const p = document.createElement('img');
-              p.src = ACORN_SRC;
+              p.src = ant.pileAcorns[j].def.src;
               p.style.cssText =
                 `position:absolute; left:${4 + (j % 5) * 8}px; bottom:${1 + Math.floor(j / 5) * 7 + (j % 2)}px; width:14px; height:auto; transform:rotate(${j % 2 ? 10 : -8}deg); filter:drop-shadow(0 1px 2px rgba(0,0,0,0.24));`;
               ant.pile.appendChild(p);
@@ -561,7 +821,10 @@
     stopSnd('bgm');
     stopSnd('march');
 
-    const pts = _caught * BONUS_PT;
+    const pts = _bonusPts;
+    const perfect = _caught >= TOTAL;
+    if (perfect) playSnd('perfect');
+
     clearOverlay();
     setOverlayStyle('rgba(10,35,15,0.92)', 'center');
 
@@ -572,15 +835,21 @@
     t1.className = 'bns-score-title';
     t1.textContent = 'BONUS!';
 
+    const perfectText = document.createElement('div');
+    perfectText.className = 'bns-score-perfect';
+    perfectText.textContent = 'パーフェクト！';
+    perfectText.style.display = perfect ? 'block' : 'none';
+
     const t2 = document.createElement('div');
     t2.className = 'bns-score-count';
     t2.textContent = `${_caught} / ${TOTAL}`;
 
     const t3 = document.createElement('div');
     t3.className = 'bns-score-pts';
-    t3.textContent = `+ ${pts} pt`;
+    t3.textContent = pts >= 0 ? `+ ${pts} pt` : `- ${Math.abs(pts)} pt`;
 
     box.appendChild(t1);
+    box.appendChild(perfectText);
     box.appendChild(t2);
     box.appendChild(t3);
     _overlay.appendChild(box);
@@ -608,9 +877,10 @@
      公開 API
   ===================================================== */
   window.BonusGame = {
-    start(charIdx, onFinish) {
+    start(charIdx, onFinish, burstOrigin) {
       if (_phase !== 'idle') return false;
       _charIdx  = charIdx;
+      _burstOrigin = burstOrigin || null;
       _onFinish = onFinish;
       phaseCharPopup();
       return true;

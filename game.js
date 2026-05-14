@@ -157,28 +157,31 @@
     }
   }
 
-  function handleLargeMerge({ charIndex }) {
+  function handleLargeMerge({ charIndex, x, y }) {
     if (bonusActive) return;
     if (!window.BonusGame) return;
 
     bonusActive = true;
+    pauseNormalGameForBonus();
 
     setTimeout(() => {
-      pauseNormalGameForBonus();
+      const started = window.BonusGame.start(
+        charIndex,
+        (bonusPoints) => {
+          bonusActive = false;
+          resumeNormalGameAfterBonus();
 
-      const started = window.BonusGame.start(charIndex, (bonusPoints) => {
-        bonusActive = false;
-        resumeNormalGameAfterBonus();
-
-        /* ボーナスポイント加算 */
-        if (bonusPoints > 0) dropletEngine.addScore(bonusPoints);
-      });
+          /* ボーナスポイント加算・減点 */
+          if (bonusPoints !== 0) dropletEngine.addScore(bonusPoints);
+        },
+        typeof x === "number" && typeof y === "number" ? { x, y } : null
+      );
 
       if (!started) {
         bonusActive = false;
         resumeNormalGameAfterBonus();
       }
-    }, 0);
+    }, 150);
   }
 
   function startBonusTest() {

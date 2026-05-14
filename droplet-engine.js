@@ -864,8 +864,8 @@
       },
 
       addScore(points) {
-        if (typeof points !== 'number' || points <= 0) return;
-        score += points;
+        if (typeof points !== 'number' || points === 0) return;
+        score = Math.max(0, score + points);
         updateScoreUI();
       },
 

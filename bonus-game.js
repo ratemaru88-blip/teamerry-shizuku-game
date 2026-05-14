@@ -6,23 +6,23 @@
      0:kakao 1:pakku 2:peapea 3:tyokopa 4:hoippu 5:tyatyajii 6:minto
   ===================================================== */
   const TOBIDASU = [
-    'assets/images/kakao_tobidasu_1.png',
-    'assets/images/pakku_tobidasu_1.png',
-    'assets/images/peapea_tobidasu_1.png',
-    'assets/images/tyokopa_tobidasu_1.png',
-    'assets/images/hoippu_tobidasu_1.png',
-    'assets/images/tyatyajii_tobidasu_1.png',
-    'assets/images/minto_tobidasu_1.png',
+    'assets/images/kakao_tobidasu_1.webp',
+    'assets/images/pakku_tobidasu_1.webp',
+    'assets/images/peapea_tobidasu_1.webp',
+    'assets/images/tyokopa_tobidasu_1.webp',
+    'assets/images/hoippu_tobidasu_1.webp',
+    'assets/images/tyatyajii_tobidasu_1.webp',
+    'assets/images/minto_tobidasu_1.webp',
   ];
 
-  const BG_SRC     = 'assets/images/Bonus Game_haikei.png';
-  const LOGO_SRC   = 'assets/images/BonusGame_logo.png';
-  const ACORN_SRC  = 'assets/images/donguri_1.png';
-  const BASKET_SRC = 'assets/images/kago.png';
-  const GROUND_SRC = 'assets/images/G_anderbar.png';
-  const HAT_R_SRC  = 'assets/images/ari_hata_R.png';
-  const ANT_R1     = 'assets/images/ant_R_1.png';
-  const ANT_R2     = 'assets/images/ant_R_2.png';
+  const BG_SRC     = 'assets/images/Bonus Game_haikei.webp';
+  const LOGO_SRC   = 'assets/images/BonusGame_logo.webp';
+  const ACORN_SRC  = 'assets/images/donguri_1.webp';
+  const BASKET_SRC = 'assets/images/kago.webp';
+  const GROUND_SRC = 'assets/images/G_anderbar.webp';
+  const HAT_R_SRC  = 'assets/images/ari_hata_R.webp';
+  const ANT_R1     = 'assets/images/ant_R_1.webp';
+  const ANT_R2     = 'assets/images/ant_R_2.webp';
 
   /* =====================================================
      サウンド

@@ -230,10 +230,10 @@
   ========================================================= */
 
   const ANT_TEX = {
-    L1: "assets/images/ant_L_1.png",
-    L2: "assets/images/ant_L_2.png",
-    R1: "assets/images/ant_R_1.png",
-    R2: "assets/images/ant_R_2.png",
+    L1: "assets/images/ant_L_1.webp",
+    L2: "assets/images/ant_L_2.webp",
+    R1: "assets/images/ant_R_1.webp",
+    R2: "assets/images/ant_R_2.webp",
   };
 
   const TAN_CAR_SRC = "assets/images/tan_car.png";

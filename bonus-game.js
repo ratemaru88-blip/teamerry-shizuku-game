@@ -91,6 +91,7 @@
   const GAME_OVER_DROP_SPEED = 7.5;
   const SPAWN_MS    = 460;
   const FREEZE_MS   = 2000;
+  const SETUMEI_MS  = 4000;
   const SETUMEI_SEEN_KEY = 'teamerry_bonus_setumei_seen';
 
   const FALL_ITEMS = {
@@ -329,7 +330,7 @@
     img.className = 'bns-setumei-img';
     _overlay.appendChild(img);
 
-    setTimeout(() => { if (_phase === 'setumei') phasePlay(); }, 2000);
+    setTimeout(() => { if (_phase === 'setumei') phasePlay(); }, SETUMEI_MS);
   }
 
   /* =====================================================

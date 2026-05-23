@@ -61,7 +61,6 @@ a {
 }
 
 .forest-stage,
-.forest-camera,
 .forest-layer,
 .forest-effect,
 .forest-vignette {
@@ -75,11 +74,14 @@ a {
 }
 
 .forest-camera {
+  position: absolute;
   left: 50%;
   top: 50%;
-  width: max(150vw, calc(108svh * 16 / 9));
-  height: auto;
-  aspect-ratio: 16 / 9;
+  width: 192vh;
+  min-width: 150vw;
+  max-width: none;
+  height: 108vh;
+  min-height: 520px;
   transform: translate3d(calc(-50% + var(--map-x)), calc(-50% + var(--map-y)), 0) scale(var(--map-scale));
   transform-origin: var(--camera-origin-x) var(--camera-origin-y);
   animation: forestCameraIntro var(--camera-duration) cubic-bezier(0.2, 0.76, 0.2, 1) forwards;
@@ -90,6 +92,15 @@ a {
 
 .forest-layer {
   pointer-events: none;
+}
+
+.forest-layer--base {
+  position: absolute;
+  inset: 0;
+  background-image: url("./assets/images/forest.webp");
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: cover;
 }
 
 .forest-layer--base img {
@@ -325,7 +336,9 @@ body.intro-finished .forest-button:nth-child(4) {
   }
 
   .forest-camera {
-    width: max(132vw, calc(106svh * 16 / 9));
+    width: 188vh;
+    min-width: 132vw;
+    height: 106vh;
   }
 
   .ui-buttons {
@@ -361,7 +374,52 @@ body.intro-finished .forest-button:nth-child(4) {
   }
 
   .forest-camera {
-    width: max(170vw, calc(108svh * 16 / 9));
+    width: 192vh;
+    min-width: 170vw;
+    height: 108vh;
+  }
+}
+
+@supports (width: max(1px, 2px)) {
+  .forest-camera {
+    width: max(150vw, calc(108vh * 16 / 9));
+    min-width: 0;
+    height: 108vh;
+  }
+
+  @media (min-width: 760px) {
+    .forest-camera {
+      width: max(132vw, calc(106vh * 16 / 9));
+      height: 106vh;
+    }
+  }
+
+  @media (max-width: 759px) {
+    .forest-camera {
+      width: max(170vw, calc(108vh * 16 / 9));
+      height: 108vh;
+    }
+  }
+}
+
+@supports (height: 100svh) and (width: max(1px, 2px)) {
+  .forest-camera {
+    width: max(150vw, calc(108svh * 16 / 9));
+    height: 108svh;
+  }
+
+  @media (min-width: 760px) {
+    .forest-camera {
+      width: max(132vw, calc(106svh * 16 / 9));
+      height: 106svh;
+    }
+  }
+
+  @media (max-width: 759px) {
+    .forest-camera {
+      width: max(170vw, calc(108svh * 16 / 9));
+      height: 108svh;
+    }
   }
 }
 

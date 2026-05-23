@@ -1,6 +1,381 @@
+:root {
+  --camera-start-scale: 0.54;
+  --camera-end-scale: 1.38;
+  --camera-start-x: 0px;
+  --camera-start-y: 0px;
+  --camera-end-x: -3vw;
+  --camera-end-y: 7vh;
+  --camera-origin-x: 53%;
+  --camera-origin-y: 48%;
+  --camera-duration: 4s;
+  --map-x: var(--camera-start-x);
+  --map-y: var(--camera-start-y);
+  --map-scale: var(--camera-start-scale);
+  --tea-brown: #5f4a32;
+  --tea-cream: #fff6db;
+  --leaf-deep: #13251d;
+  --leaf-shadow: #09140f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+}
+
 body {
   margin: 0;
-  background: #1e2a24;
-  color: white;
   overflow: hidden;
+  background: var(--leaf-deep);
+  color: var(--tea-cream);
+  font-family: "Yu Gothic", "Hiragino Maru Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+  letter-spacing: 0;
+  touch-action: none;
+  user-select: none;
+}
+
+button,
+a {
+  font: inherit;
+}
+
+.forest-scene {
+  position: relative;
+  width: 100vw;
+  height: 100svh;
+  min-height: 520px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255, 246, 219, 0.12), transparent 34%),
+    linear-gradient(180deg, #25382d 0%, #101f18 100%);
+  cursor: grab;
+  isolation: isolate;
+}
+
+.forest-scene.is-dragging {
+  cursor: grabbing;
+}
+
+.forest-stage,
+.forest-camera,
+.forest-layer,
+.forest-effect,
+.forest-vignette {
+  position: absolute;
+  inset: 0;
+}
+
+.forest-stage {
+  z-index: 1;
+  overflow: hidden;
+}
+
+.forest-camera {
+  left: 50%;
+  top: 50%;
+  width: max(150vw, calc(108svh * 16 / 9));
+  height: auto;
+  aspect-ratio: 16 / 9;
+  transform: translate3d(calc(-50% + var(--map-x)), calc(-50% + var(--map-y)), 0) scale(var(--map-scale));
+  transform-origin: var(--camera-origin-x) var(--camera-origin-y);
+  animation: forestCameraIntro var(--camera-duration) cubic-bezier(0.2, 0.76, 0.2, 1) forwards;
+  filter: saturate(0.95) contrast(0.97) brightness(0.9);
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+.forest-layer {
+  pointer-events: none;
+}
+
+.forest-layer--base img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  transform: translateZ(0);
+}
+
+.forest-layer--points {
+  z-index: 2;
+  pointer-events: none;
+}
+
+.forest-effect {
+  z-index: 2;
+  pointer-events: none;
+}
+
+.forest-effect--light {
+  background:
+    radial-gradient(circle at 52% 36%, rgba(255, 246, 210, 0.19), transparent 21%),
+    radial-gradient(circle at 41% 63%, rgba(139, 213, 188, 0.13), transparent 30%);
+  mix-blend-mode: screen;
+  opacity: 0.62;
+}
+
+.forest-effect--mist {
+  background:
+    linear-gradient(100deg, transparent 0%, rgba(235, 255, 236, 0.1) 36%, transparent 70%),
+    linear-gradient(180deg, rgba(255, 250, 231, 0.12), transparent 34%, rgba(9, 20, 15, 0.18));
+  opacity: 0.44;
+}
+
+.forest-vignette {
+  z-index: 3;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 48%, transparent 43%, rgba(11, 23, 18, 0.27) 74%, rgba(5, 11, 8, 0.65) 100%),
+    linear-gradient(180deg, rgba(255, 248, 220, 0.1), transparent 30%, rgba(9, 18, 14, 0.26));
+}
+
+.forest-title {
+  position: absolute;
+  left: clamp(18px, 5vw, 64px);
+  top: clamp(18px, 5vh, 48px);
+  z-index: 4;
+  max-width: min(380px, calc(100vw - 36px));
+  text-shadow: 0 2px 12px rgba(12, 24, 18, 0.72);
+  opacity: 0.96;
+  pointer-events: none;
+}
+
+.forest-title p {
+  margin: 0 0 6px;
+  color: rgba(255, 246, 219, 0.82);
+  font-size: clamp(0.74rem, 2.6vw, 0.92rem);
+}
+
+.forest-title h1 {
+  margin: 0;
+  font-size: clamp(1.55rem, 7vw, 3.1rem);
+  font-weight: 700;
+  line-height: 1.04;
+}
+
+.ui-buttons {
+  position: absolute;
+  left: 50%;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  z-index: 5;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(118px, 1fr));
+  gap: 10px;
+  width: min(92vw, 420px);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+body.intro-finished .ui-buttons {
+  pointer-events: auto;
+}
+
+.forest-button {
+  display: grid;
+  min-height: 46px;
+  place-items: center;
+  border: 1px solid rgba(255, 246, 219, 0.52);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: rgba(255, 246, 219, 0.76);
+  box-shadow: 0 8px 22px rgba(9, 20, 15, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  color: var(--tea-brown);
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  opacity: 0;
+  transform: translate3d(0, 14px, 0);
+  backdrop-filter: blur(7px);
+  transition:
+    opacity 760ms ease,
+    transform 760ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease;
+}
+
+body.intro-finished .forest-button {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
+body.intro-finished .forest-button:nth-child(1) {
+  transition-delay: 80ms, 80ms, 0ms, 0ms;
+}
+
+body.intro-finished .forest-button:nth-child(2) {
+  transition-delay: 230ms, 230ms, 0ms, 0ms;
+}
+
+body.intro-finished .forest-button:nth-child(3) {
+  transition-delay: 380ms, 380ms, 0ms, 0ms;
+}
+
+body.intro-finished .forest-button:nth-child(4) {
+  transition-delay: 530ms, 530ms, 0ms, 0ms;
+}
+
+.forest-button.primary {
+  background: rgba(255, 238, 174, 0.86);
+}
+
+.forest-button:focus-visible {
+  outline: 3px solid rgba(255, 248, 214, 0.74);
+  outline-offset: 3px;
+}
+
+.forest-button:hover {
+  background: rgba(255, 250, 226, 0.88);
+  box-shadow: 0 10px 24px rgba(9, 20, 15, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.62);
+}
+
+.memory-drop {
+  position: absolute;
+  left: 55.5%;
+  top: 58%;
+  width: 20px;
+  height: 25px;
+  border: 0;
+  border-radius: 50% 50% 58% 58%;
+  background:
+    radial-gradient(circle at 38% 26%, #ffffff 0 11%, transparent 12%),
+    radial-gradient(circle at 52% 62%, #bff8ff 0 15%, #72d6df 42%, rgba(63, 160, 154, 0.42) 72%, transparent 74%);
+  box-shadow: 0 0 13px rgba(178, 248, 255, 0.92), 0 0 26px rgba(223, 255, 214, 0.48);
+  cursor: pointer;
+  opacity: 0.74;
+  transform: translate(-50%, -50%) rotate(8deg) scale(0.88);
+  animation: memoryGlow 2.8s ease-in-out infinite;
+  pointer-events: auto;
+}
+
+.memory-drop::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(207, 255, 245, 0.3), transparent 66%);
+  transform: translate(-50%, -50%);
+}
+
+.forest-toast {
+  position: absolute;
+  left: 50%;
+  bottom: calc(max(20px, env(safe-area-inset-bottom)) + 122px);
+  z-index: 6;
+  width: min(86vw, 420px);
+  margin: 0;
+  padding: 12px 16px;
+  border: 1px solid rgba(255, 246, 219, 0.4);
+  border-radius: 8px;
+  background: rgba(28, 42, 31, 0.78);
+  box-shadow: 0 12px 30px rgba(6, 13, 10, 0.32);
+  color: var(--tea-cream);
+  text-align: center;
+  line-height: 1.6;
+  opacity: 0;
+  transform: translate(-50%, 10px);
+  pointer-events: none;
+  backdrop-filter: blur(8px);
+  transition: opacity 260ms ease, transform 260ms ease;
+}
+
+.forest-toast.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+@keyframes forestCameraIntro {
+  0% {
+    transform: translate3d(calc(-50% + var(--camera-start-x)), calc(-50% + var(--camera-start-y)), 0) scale(var(--camera-start-scale));
+  }
+
+  100% {
+    transform: translate3d(calc(-50% + var(--camera-end-x)), calc(-50% + var(--camera-end-y)), 0) scale(var(--camera-end-scale));
+  }
+}
+
+@keyframes memoryGlow {
+  0%,
+  100% {
+    opacity: 0.46;
+    filter: brightness(0.92);
+  }
+
+  50% {
+    opacity: 1;
+    filter: brightness(1.2);
+  }
+}
+
+@media (min-width: 760px) {
+  :root {
+    --camera-start-scale: 0.7;
+    --camera-end-scale: 1.28;
+    --camera-end-x: -2.5vw;
+    --camera-end-y: 6vh;
+    --camera-origin-x: 53%;
+    --camera-origin-y: 47%;
+  }
+
+  .forest-camera {
+    width: max(132vw, calc(106svh * 16 / 9));
+  }
+
+  .ui-buttons {
+    left: auto;
+    right: clamp(24px, 5vw, 72px);
+    bottom: clamp(24px, 7vh, 72px);
+    grid-template-columns: 1fr;
+    width: 190px;
+    transform: none;
+  }
+
+  .forest-toast {
+    left: auto;
+    right: clamp(24px, 5vw, 72px);
+    bottom: clamp(242px, 36vh, 330px);
+    transform: translateY(10px);
+  }
+
+  .forest-toast.is-visible {
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 759px) {
+  :root {
+    --camera-start-scale: 0.54;
+    --camera-end-scale: 1.38;
+    --camera-end-x: -3vw;
+    --camera-end-y: 8vh;
+    --camera-origin-x: 53%;
+    --camera-origin-y: 49%;
+    --camera-duration: 4s;
+  }
+
+  .forest-camera {
+    width: max(170vw, calc(108svh * 16 / 9));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .forest-camera {
+    animation-duration: 1ms;
+  }
+
+  .memory-drop {
+    animation-duration: 4s;
+  }
+
+  .forest-button,
+  .forest-toast {
+    transition-duration: 1ms;
+  }
 }

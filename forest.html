@@ -2,12 +2,42 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TeaMerry Forest</title>
   <link rel="stylesheet" href="forest.css">
 </head>
 <body>
+  <main class="forest-scene" aria-label="TeaMerryの森を探索する入口">
+    <div class="forest-stage">
+      <div class="forest-camera">
+        <div class="forest-layer forest-layer--base">
+          <img src="assets/images/forest.webp" alt="">
+        </div>
 
-  <h1>TeaMerry Forest</h1>
+        <div class="forest-layer forest-layer--points">
+          <button class="memory-drop" type="button" aria-label="光る雫を調べる"></button>
+        </div>
+      </div>
+
+      <div class="forest-effect forest-effect--light" aria-hidden="true"></div>
+      <div class="forest-effect forest-effect--mist" aria-hidden="true"></div>
+      <div class="forest-vignette" aria-hidden="true"></div>
+    </div>
+
+    <section class="forest-title" aria-label="TeaMerry Forest">
+      <p>Tiny World in a Teacup</p>
+      <h1>TeaMerry Forest</h1>
+    </section>
+
+    <nav class="ui-buttons" aria-label="森の入口メニュー">
+      <a class="forest-button primary" href="index.html">雫ゲーム</a>
+      <button class="forest-button" type="button" data-coming-soon="おみくじ">おみくじ</button>
+      <button class="forest-button" type="button" data-coming-soon="キャラクター">キャラクター</button>
+      <button class="forest-button" type="button" data-coming-soon="作品">作品</button>
+    </nav>
+
+    <p class="forest-toast" role="status" aria-live="polite"></p>
+  </main>
 
   <script src="forest.js"></script>
 </body>

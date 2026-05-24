@@ -15,28 +15,9 @@
   --tea-cream: #fff6db;
   --leaf-deep: #13251d;
   --leaf-shadow: #09140f;
-  --waterfall-left: 56.3%;
-  --waterfall-top: 36.5%;
-  --waterfall-width: clamp(48px, 4.6vw, 70px);
-  --waterfall-opacity: 0.38;
   --falls-mist-left: 53.4%;
   --falls-mist-top: 42.5%;
   --falls-mist-width: clamp(112px, 11vw, 170px);
-  --lake-shimmer-left: 23.8%;
-  --lake-shimmer-top: 22%;
-  --lake-shimmer-width: clamp(260px, 26vw, 400px);
-  --lake-shimmer-opacity: 0.22;
-  --lake-ripple-left: 33.4%;
-  --lake-ripple-top: 29.2%;
-  --lake-ripple-width: clamp(92px, 9vw, 138px);
-  --river-shimmer-left: 46.8%;
-  --river-shimmer-top: 55.8%;
-  --river-shimmer-width: clamp(118px, 10.6vw, 166px);
-  --river-shimmer-opacity: 0.28;
-  --lower-river-shimmer-left: 45%;
-  --lower-river-shimmer-top: 74%;
-  --lower-river-shimmer-width: clamp(144px, 13vw, 206px);
-  --lower-river-shimmer-opacity: 0.23;
 }
 
 * {
@@ -118,7 +99,7 @@ a {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: fill;
+  object-fit: cover;
   filter: saturate(0.95) contrast(0.97) brightness(0.9);
   pointer-events: none;
 }
@@ -287,8 +268,8 @@ body.intro-finished .forest-portal--fortune {
 .forest-portal--character {
   --portal-size: clamp(80px, 7.8vw, 116px);
   --portal-opacity: 0.88;
-  left: 41%;
-  top: 20%;
+  left: 45%;
+  top: 16%;
 }
 
 .forest-portal--character::before {
@@ -328,12 +309,8 @@ body.intro-finished .forest-portal--fortune {
   top: 84%;
 }
 
-.waterfall-flow,
 .ambient-mist,
-.lake-ripple,
-.water-shimmer,
-.leaf-drift,
-.forest-glow {
+.leaf-drift {
   position: absolute;
   z-index: 1;
   display: block;
@@ -341,178 +318,15 @@ body.intro-finished .forest-portal--fortune {
   user-select: none;
 }
 
-.waterfall-flow {
-  left: var(--waterfall-left);
-  top: var(--waterfall-top);
-  width: var(--waterfall-width);
-  aspect-ratio: 0.36;
-  border-radius: 44% 44% 62% 62%;
-  background-image:
-    url("./assets/images/effects/ambient/waterfall-flow.webp"),
-    url("./assets/images/effects/ambient/water-shimmer.webp");
-  background-position: center 0, center;
-  background-repeat: repeat-y, no-repeat;
-  background-size: 100% auto, 128% 128%;
-  opacity: var(--waterfall-opacity);
-  mix-blend-mode: screen;
-  filter: brightness(1.08) blur(0.18px);
-  clip-path: polygon(39% 0%, 67% 0%, 75% 18%, 68% 44%, 80% 72%, 62% 100%, 42% 100%, 29% 72%, 36% 44%, 28% 18%);
-  mask-image:
-    linear-gradient(180deg, transparent 0%, #000 12%, #000 82%, transparent 100%),
-    radial-gradient(ellipse at 52% 42%, #000 0 43%, transparent 66%);
-  mask-composite: intersect;
-  -webkit-mask-image:
-    linear-gradient(180deg, transparent 0%, #000 12%, #000 82%, transparent 100%),
-    radial-gradient(ellipse at 52% 42%, #000 0 43%, transparent 66%);
-  -webkit-mask-composite: source-in;
-  animation: waterfallBreath 7.6s ease-in-out infinite;
-  overflow: hidden;
-}
-
-.waterfall-flow::before,
-.waterfall-flow::after {
-  content: "";
-  position: absolute;
-  inset: -22% 18%;
-  background:
-    linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, 0.5) 18%, transparent 24%, rgba(190, 244, 255, 0.38) 50%, transparent 58%, rgba(255, 255, 255, 0.42) 78%, transparent 86%),
-    url("./assets/images/effects/ambient/water-shimmer.webp") center / 150% 150%;
-  opacity: 0.42;
-  mix-blend-mode: screen;
-  animation: waterfallStrands 9.5s linear infinite;
-}
-
-.waterfall-flow::after {
-  inset: -18% 28%;
-  opacity: 0.28;
-  animation-duration: 12s;
-  animation-delay: -4.5s;
-}
-
 .ambient-mist--falls {
   left: var(--falls-mist-left);
   top: var(--falls-mist-top);
   width: var(--falls-mist-width);
-  opacity: 0.24;
+  opacity: 0.12;
   mix-blend-mode: screen;
   mask-image: radial-gradient(ellipse at 54% 48%, #000 0 38%, transparent 72%);
   -webkit-mask-image: radial-gradient(ellipse at 54% 48%, #000 0 38%, transparent 72%);
-  animation: mistFloat 18s ease-in-out infinite;
-}
-
-.lake-ripple {
-  width: var(--lake-ripple-width);
-  aspect-ratio: 1;
-  background: url("./assets/images/effects/ambient/lake-ripple.webp") center / contain no-repeat;
-  opacity: 0;
-  mix-blend-mode: screen;
-  mask-image: radial-gradient(ellipse at 50% 50%, #000 0 38%, transparent 68%);
-  -webkit-mask-image: radial-gradient(ellipse at 50% 50%, #000 0 38%, transparent 68%);
-  animation: lakeRipple 12s ease-out infinite;
-}
-
-.lake-ripple--one {
-  left: var(--lake-ripple-left);
-  top: var(--lake-ripple-top);
-}
-
-.lake-ripple--two {
-  left: calc(var(--lake-ripple-left) + 7%);
-  top: calc(var(--lake-ripple-top) - 4%);
-  width: calc(var(--lake-ripple-width) * 0.76);
-  animation-delay: 4.6s;
-}
-
-.water-shimmer {
-  aspect-ratio: 2.7;
-  opacity: var(--lake-shimmer-opacity);
-  mix-blend-mode: screen;
-  overflow: hidden;
-  filter: brightness(1.02);
-}
-
-.water-shimmer::before,
-.water-shimmer::after {
-  content: "";
-  position: absolute;
-  inset: -20%;
-  background:
-    linear-gradient(100deg, transparent 0 18%, rgba(255, 255, 255, 0.22) 22%, transparent 28% 48%, rgba(180, 240, 255, 0.18) 53%, transparent 60% 100%),
-    url("./assets/images/effects/ambient/water-shimmer.webp") center / cover;
-  opacity: 0.7;
-  mix-blend-mode: screen;
-  mask-image: linear-gradient(90deg, transparent 0%, #000 16%, #000 84%, transparent 100%);
-  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 16%, #000 84%, transparent 100%);
-}
-
-.water-shimmer::after {
-  opacity: 0.42;
-}
-
-.water-shimmer--lake {
-  left: var(--lake-shimmer-left);
-  top: var(--lake-shimmer-top);
-  width: var(--lake-shimmer-width);
-  border-radius: 50%;
-  mask-image: radial-gradient(ellipse at 45% 52%, #000 0 47%, transparent 74%);
-  -webkit-mask-image: radial-gradient(ellipse at 45% 52%, #000 0 47%, transparent 74%);
-  animation: lakeBreath 11s ease-in-out infinite;
-}
-
-.water-shimmer--lake::before {
-  animation: lakeShimmerFlow 19s ease-in-out infinite;
-}
-
-.water-shimmer--lake::after {
-  animation: lakeShimmerFlowAlt 23s ease-in-out infinite;
-}
-
-.water-shimmer--river {
-  left: var(--river-shimmer-left);
-  top: var(--river-shimmer-top);
-  width: var(--river-shimmer-width);
-  opacity: var(--river-shimmer-opacity);
-  rotate: 44deg;
-  border-radius: 46%;
-  mask-image: linear-gradient(90deg, transparent 0%, #000 24%, #000 72%, transparent 100%);
-  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 24%, #000 72%, transparent 100%);
-}
-
-.water-shimmer--river::before {
-  animation: riverShimmerLines 8.4s ease-in-out infinite;
-}
-
-.water-shimmer--river::after {
-  animation: riverShimmerLinesAlt 10.6s ease-in-out infinite;
-}
-
-.water-shimmer--river-stones {
-  left: 49.5%;
-  top: 64%;
-  width: clamp(76px, 7vw, 110px);
-  opacity: 0.32;
-  rotate: 58deg;
-  mask-image: radial-gradient(ellipse at 50% 50%, #000 0 36%, transparent 68%);
-  -webkit-mask-image: radial-gradient(ellipse at 50% 50%, #000 0 36%, transparent 68%);
-}
-
-.water-shimmer--lower-river {
-  left: var(--lower-river-shimmer-left);
-  top: var(--lower-river-shimmer-top);
-  width: var(--lower-river-shimmer-width);
-  opacity: var(--lower-river-shimmer-opacity);
-  rotate: 67deg;
-  border-radius: 48%;
-  mask-image: linear-gradient(90deg, transparent 0%, #000 22%, #000 76%, transparent 100%);
-  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 22%, #000 76%, transparent 100%);
-}
-
-.water-shimmer--lower-river::before {
-  animation: lowerRiverShimmerLines 10.8s ease-in-out infinite;
-}
-
-.water-shimmer--lower-river::after {
-  animation: lowerRiverShimmerLinesAlt 13s ease-in-out infinite;
+  animation: mistFloat 26s ease-in-out infinite;
 }
 
 .leaf-drift {
@@ -532,30 +346,6 @@ body.intro-finished .forest-portal--fortune {
   top: 36%;
   animation-delay: 11s;
   animation-duration: 29s;
-}
-
-.forest-glow {
-  width: clamp(18px, 2vw, 30px);
-  opacity: 0;
-  mix-blend-mode: screen;
-  animation: forestGlow 8.5s ease-in-out infinite;
-}
-
-.forest-glow--one {
-  left: 58%;
-  top: 47%;
-}
-
-.forest-glow--two {
-  left: 21%;
-  top: 58%;
-  animation-delay: 3.2s;
-}
-
-.forest-glow--three {
-  left: 74%;
-  top: 73%;
-  animation-delay: 6.1s;
 }
 
 .hidden-drop {
@@ -856,140 +646,6 @@ body.intro-finished .mint-guide.is-active {
   }
 }
 
-@keyframes lakeRipple {
-  0% {
-    opacity: 0;
-    scale: 0.82;
-    filter: brightness(0.96);
-  }
-
-  18% {
-    opacity: 0.16;
-  }
-
-  100% {
-    opacity: 0;
-    scale: 1.18;
-    filter: brightness(1.04);
-  }
-}
-
-@keyframes lakeBreath {
-  0%,
-  100% {
-    opacity: calc(var(--lake-shimmer-opacity) * 0.62);
-    filter: brightness(0.98);
-  }
-
-  50% {
-    opacity: var(--lake-shimmer-opacity);
-    filter: brightness(1.08);
-  }
-}
-
-@keyframes lakeShimmerFlow {
-  0%,
-  100% {
-    opacity: 0.32;
-    translate: -5% 0;
-  }
-
-  50% {
-    opacity: 0.62;
-    translate: 5% -1%;
-  }
-}
-
-@keyframes lakeShimmerFlowAlt {
-  0%,
-  100% {
-    opacity: 0.2;
-    translate: 6% 1%;
-  }
-
-  50% {
-    opacity: 0.48;
-    translate: -4% 0;
-  }
-}
-
-@keyframes riverShimmerLines {
-  0%,
-  100% {
-    opacity: 0.32;
-    translate: -8% -3%;
-  }
-
-  43% {
-    opacity: 0.76;
-    translate: 4% 5%;
-  }
-
-  70% {
-    opacity: 0.48;
-  }
-}
-
-@keyframes riverShimmerLinesAlt {
-  0%,
-  100% {
-    opacity: 0.18;
-    translate: 6% 4%;
-  }
-
-  52% {
-    opacity: 0.54;
-    translate: -5% -4%;
-  }
-}
-
-@keyframes lowerRiverShimmerLines {
-  0%,
-  100% {
-    opacity: 0.24;
-    translate: -6% -5%;
-  }
-
-  50% {
-    opacity: 0.62;
-    translate: 5% 7%;
-  }
-}
-
-@keyframes lowerRiverShimmerLinesAlt {
-  0%,
-  100% {
-    opacity: 0.18;
-    translate: 5% 5%;
-  }
-
-  46% {
-    opacity: 0.5;
-    translate: -4% -6%;
-  }
-}
-
-@keyframes forestGlow {
-  0%,
-  100% {
-    opacity: 0;
-    scale: 0.7;
-  }
-
-  44% {
-    opacity: 0;
-  }
-
-  50% {
-    opacity: 0.42;
-    scale: 1;
-  }
-
-  58% {
-    opacity: 0;
-  }
-}
-
 @keyframes memoryGlowExpand {
   0% {
     opacity: 0.68;
@@ -1043,33 +699,6 @@ body.intro-finished .mint-guide.is-active {
   100% {
     opacity: 0;
     translate: 0 -10px;
-  }
-}
-
-@keyframes waterfallBreath {
-  0% {
-    opacity: calc(var(--waterfall-opacity) * 0.8);
-    filter: brightness(1.02) blur(0.18px);
-  }
-
-  50% {
-    opacity: var(--waterfall-opacity);
-    filter: brightness(1.14) blur(0.18px);
-  }
-
-  100% {
-    opacity: calc(var(--waterfall-opacity) * 0.86);
-    filter: brightness(1.04) blur(0.18px);
-  }
-}
-
-@keyframes waterfallStrands {
-  0% {
-    translate: 0 -12%;
-  }
-
-  100% {
-    translate: 0 12%;
   }
 }
 
@@ -1152,10 +781,7 @@ body.intro-finished .mint-guide.is-active {
     height: 108vh;
   }
 
-  .leaf-drift--two,
-  .forest-glow--three,
-  .water-shimmer--river-stones,
-  .water-shimmer--lower-river {
+  .leaf-drift--two {
     display: none;
   }
 }
@@ -1222,16 +848,8 @@ body.intro-finished .mint-guide.is-active {
 
   .hidden-drop,
   .mint-guide__image,
-  .waterfall-flow,
-  .waterfall-flow::before,
-  .waterfall-flow::after,
   .ambient-mist,
-  .lake-ripple,
-  .water-shimmer,
-  .water-shimmer::before,
-  .water-shimmer::after,
-  .leaf-drift,
-  .forest-glow {
+  .leaf-drift {
     animation-duration: 4s;
   }
 

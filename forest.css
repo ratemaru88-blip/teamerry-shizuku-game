@@ -3,8 +3,8 @@
   --camera-end-scale: 1.38;
   --camera-start-x: 0px;
   --camera-start-y: 0px;
-  --camera-end-x: -3vw;
-  --camera-end-y: 7vh;
+  --camera-end-x: -2vw;
+  --camera-end-y: 5vh;
   --camera-origin-x: 53%;
   --camera-origin-y: 48%;
   --camera-duration: 4s;
@@ -15,6 +15,28 @@
   --tea-cream: #fff6db;
   --leaf-deep: #13251d;
   --leaf-shadow: #09140f;
+  --waterfall-left: 56.3%;
+  --waterfall-top: 36.5%;
+  --waterfall-width: clamp(48px, 4.6vw, 70px);
+  --waterfall-opacity: 0.38;
+  --falls-mist-left: 53.4%;
+  --falls-mist-top: 42.5%;
+  --falls-mist-width: clamp(112px, 11vw, 170px);
+  --lake-shimmer-left: 23.8%;
+  --lake-shimmer-top: 22%;
+  --lake-shimmer-width: clamp(260px, 26vw, 400px);
+  --lake-shimmer-opacity: 0.22;
+  --lake-ripple-left: 33.4%;
+  --lake-ripple-top: 29.2%;
+  --lake-ripple-width: clamp(92px, 9vw, 138px);
+  --river-shimmer-left: 46.8%;
+  --river-shimmer-top: 55.8%;
+  --river-shimmer-width: clamp(118px, 10.6vw, 166px);
+  --river-shimmer-opacity: 0.28;
+  --lower-river-shimmer-left: 45%;
+  --lower-river-shimmer-top: 74%;
+  --lower-river-shimmer-width: clamp(144px, 13vw, 206px);
+  --lower-river-shimmer-opacity: 0.23;
 }
 
 * {
@@ -61,7 +83,6 @@ a {
 }
 
 .forest-stage,
-.forest-layer,
 .forest-effect,
 .forest-vignette {
   position: absolute;
@@ -73,47 +94,32 @@ a {
   overflow: hidden;
 }
 
-.forest-camera {
+.map-content {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 192vh;
+  width: 162vh;
   min-width: 150vw;
   max-width: none;
   height: 108vh;
   min-height: 520px;
   transform: translate3d(calc(-50% + var(--map-x)), calc(-50% + var(--map-y)), 0) scale(var(--map-scale));
   transform-origin: var(--camera-origin-x) var(--camera-origin-y);
-  animation: forestCameraIntro var(--camera-duration) cubic-bezier(0.2, 0.76, 0.2, 1) forwards;
-  filter: saturate(0.95) contrast(0.97) brightness(0.9);
+  animation: mapContentIntro var(--camera-duration) cubic-bezier(0.2, 0.76, 0.2, 1) forwards;
   backface-visibility: hidden;
+  isolation: isolate;
   will-change: transform;
 }
 
-.forest-layer {
-  pointer-events: none;
-}
-
-.forest-layer--base {
+.forest-bg {
   position: absolute;
   inset: 0;
-  background-image: url("./assets/images/forest.webp");
-  background-position: center center;
-  background-repeat: no-repeat;
-  background-size: cover;
-}
-
-.forest-layer--base img {
+  z-index: 0;
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  pointer-events: none;
-  transform: translateZ(0);
-}
-
-.forest-layer--points {
-  z-index: 2;
+  object-fit: fill;
+  filter: saturate(0.95) contrast(0.97) brightness(0.9);
   pointer-events: none;
 }
 
@@ -152,7 +158,7 @@ a {
   z-index: 4;
   max-width: min(380px, calc(100vw - 36px));
   text-shadow: 0 2px 12px rgba(12, 24, 18, 0.72);
-  opacity: 0.96;
+  opacity: 0.88;
   pointer-events: none;
 }
 
@@ -164,106 +170,418 @@ a {
 
 .forest-title h1 {
   margin: 0;
-  font-size: clamp(1.55rem, 7vw, 3.1rem);
+  font-size: clamp(1.3rem, 5vw, 2.35rem);
   font-weight: 700;
   line-height: 1.04;
 }
 
-.ui-buttons {
-  position: absolute;
-  left: 50%;
-  bottom: max(20px, env(safe-area-inset-bottom));
-  z-index: 5;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(118px, 1fr));
-  gap: 10px;
-  width: min(92vw, 420px);
-  transform: translateX(-50%);
-  pointer-events: none;
+body.intro-finished .forest-title {
+  opacity: 0.34;
 }
 
-body.intro-finished .ui-buttons {
+.forest-portal {
+  position: absolute;
+  z-index: 3;
+  display: block;
+  width: var(--portal-size);
+  margin-top: calc(var(--portal-size) * var(--portal-offset-y, -0.5));
+  margin-left: calc(var(--portal-size) * -0.5);
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  opacity: var(--portal-opacity, 0.92);
+  pointer-events: none;
+  transform-origin: center bottom;
+  transition:
+    opacity 900ms ease,
+    filter 220ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body.intro-finished .forest-portal {
   pointer-events: auto;
 }
 
-.forest-button {
-  display: grid;
-  min-height: 46px;
-  place-items: center;
-  border: 1px solid rgba(255, 246, 219, 0.52);
-  border-radius: 8px;
-  padding: 10px 12px;
-  background: rgba(255, 246, 219, 0.76);
-  box-shadow: 0 8px 22px rgba(9, 20, 15, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.5);
-  color: var(--tea-brown);
+body:not(.intro-finished) .forest-portal {
+  opacity: 0;
+}
+
+.forest-portal img {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 9px 14px rgba(5, 14, 10, 0.34));
+  pointer-events: none;
+  user-select: none;
+}
+
+.portal-caption {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 4px);
+  z-index: 2;
+  display: block;
+  width: 100%;
+  color: #ffe66a;
+  font-size: clamp(0.46rem, 0.78vw, 0.6rem);
+  font-weight: 700;
+  line-height: 1;
   text-align: center;
-  text-decoration: none;
+  white-space: nowrap;
+  text-shadow: 0 2px 5px rgba(7, 18, 12, 0.88), 0 0 8px rgba(255, 226, 106, 0.36);
+  opacity: 0;
+  translate: -50% 4px;
+  pointer-events: none;
+}
+
+body.intro-finished .forest-portal--fortune .portal-caption {
+  animation: fortuneCaptionIn 780ms 1.95s ease-out forwards;
+}
+
+.forest-portal:hover,
+.forest-portal:focus-visible {
+  filter: brightness(1.1) drop-shadow(0 0 12px rgba(255, 246, 187, 0.44));
+  outline: 0;
+}
+
+.forest-portal:active {
+  filter: brightness(1.14) drop-shadow(0 0 10px rgba(255, 246, 187, 0.38));
+}
+
+.forest-portal--game {
+  --portal-size: clamp(86px, 8vw, 118px);
+  left: 20%;
+  top: 53%;
+}
+
+.forest-portal--fortune {
+  --portal-size: clamp(54px, 5.4vw, 78px);
+  --portal-opacity: 0.9;
+  left: 54%;
+  top: 33%;
+  opacity: 0;
+  transform-origin: 50% 0%;
+}
+
+body.intro-finished .forest-portal--fortune {
+  animation: fortuneSignDrop 1.35s 900ms cubic-bezier(0.2, 0.78, 0.2, 1) forwards;
+}
+
+.forest-portal--shrine {
+  --portal-size: clamp(112px, 11.2vw, 163px);
+  --portal-opacity: 0.86;
+  left: 47%;
+  top: 43%;
+}
+
+.forest-portal--onsen {
+  --portal-size: clamp(126px, 12.6vw, 184px);
+  --portal-opacity: 0.82;
+  left: 5%;
+  top: 49%;
+}
+
+.forest-portal--character {
+  --portal-size: clamp(80px, 7.8vw, 116px);
+  --portal-opacity: 0.88;
+  left: 41%;
+  top: 20%;
+}
+
+.forest-portal--character::before {
+  content: "";
+  position: absolute;
+  left: -20%;
+  top: -22%;
+  z-index: 0;
+  width: 140%;
+  height: 160%;
+  border-radius: 48%;
+  background:
+    radial-gradient(circle at 50% 16%, rgba(255, 236, 145, 0.34), transparent 18%),
+    linear-gradient(180deg, rgba(255, 226, 118, 0.28), rgba(255, 226, 118, 0.08) 42%, transparent 74%);
+  filter: blur(2px);
+  opacity: 0.74;
+  pointer-events: none;
+}
+
+.forest-portal--artwork {
+  --portal-size: clamp(74px, 7.2vw, 104px);
+  left: 64%;
+  top: 45%;
+}
+
+.forest-portal--blog {
+  --portal-size: clamp(76px, 7.2vw, 108px);
+  --portal-opacity: 0.86;
+  left: 90%;
+  top: 51%;
+}
+
+.forest-portal--contact {
+  --portal-size: clamp(48px, 4.8vw, 70px);
+  --portal-opacity: 0.82;
+  left: 5%;
+  top: 84%;
+}
+
+.waterfall-flow,
+.ambient-mist,
+.lake-ripple,
+.water-shimmer,
+.leaf-drift,
+.forest-glow {
+  position: absolute;
+  z-index: 1;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+}
+
+.waterfall-flow {
+  left: var(--waterfall-left);
+  top: var(--waterfall-top);
+  width: var(--waterfall-width);
+  aspect-ratio: 0.36;
+  border-radius: 44% 44% 62% 62%;
+  background-image:
+    url("./assets/images/effects/ambient/waterfall-flow.webp"),
+    url("./assets/images/effects/ambient/water-shimmer.webp");
+  background-position: center 0, center;
+  background-repeat: repeat-y, no-repeat;
+  background-size: 100% auto, 128% 128%;
+  opacity: var(--waterfall-opacity);
+  mix-blend-mode: screen;
+  filter: brightness(1.08) blur(0.18px);
+  clip-path: polygon(39% 0%, 67% 0%, 75% 18%, 68% 44%, 80% 72%, 62% 100%, 42% 100%, 29% 72%, 36% 44%, 28% 18%);
+  mask-image:
+    linear-gradient(180deg, transparent 0%, #000 12%, #000 82%, transparent 100%),
+    radial-gradient(ellipse at 52% 42%, #000 0 43%, transparent 66%);
+  mask-composite: intersect;
+  -webkit-mask-image:
+    linear-gradient(180deg, transparent 0%, #000 12%, #000 82%, transparent 100%),
+    radial-gradient(ellipse at 52% 42%, #000 0 43%, transparent 66%);
+  -webkit-mask-composite: source-in;
+  animation: waterfallBreath 7.6s ease-in-out infinite;
+  overflow: hidden;
+}
+
+.waterfall-flow::before,
+.waterfall-flow::after {
+  content: "";
+  position: absolute;
+  inset: -22% 18%;
+  background:
+    linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, 0.5) 18%, transparent 24%, rgba(190, 244, 255, 0.38) 50%, transparent 58%, rgba(255, 255, 255, 0.42) 78%, transparent 86%),
+    url("./assets/images/effects/ambient/water-shimmer.webp") center / 150% 150%;
+  opacity: 0.42;
+  mix-blend-mode: screen;
+  animation: waterfallStrands 9.5s linear infinite;
+}
+
+.waterfall-flow::after {
+  inset: -18% 28%;
+  opacity: 0.28;
+  animation-duration: 12s;
+  animation-delay: -4.5s;
+}
+
+.ambient-mist--falls {
+  left: var(--falls-mist-left);
+  top: var(--falls-mist-top);
+  width: var(--falls-mist-width);
+  opacity: 0.24;
+  mix-blend-mode: screen;
+  mask-image: radial-gradient(ellipse at 54% 48%, #000 0 38%, transparent 72%);
+  -webkit-mask-image: radial-gradient(ellipse at 54% 48%, #000 0 38%, transparent 72%);
+  animation: mistFloat 18s ease-in-out infinite;
+}
+
+.lake-ripple {
+  width: var(--lake-ripple-width);
+  aspect-ratio: 1;
+  background: url("./assets/images/effects/ambient/lake-ripple.webp") center / contain no-repeat;
+  opacity: 0;
+  mix-blend-mode: screen;
+  mask-image: radial-gradient(ellipse at 50% 50%, #000 0 38%, transparent 68%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 50%, #000 0 38%, transparent 68%);
+  animation: lakeRipple 12s ease-out infinite;
+}
+
+.lake-ripple--one {
+  left: var(--lake-ripple-left);
+  top: var(--lake-ripple-top);
+}
+
+.lake-ripple--two {
+  left: calc(var(--lake-ripple-left) + 7%);
+  top: calc(var(--lake-ripple-top) - 4%);
+  width: calc(var(--lake-ripple-width) * 0.76);
+  animation-delay: 4.6s;
+}
+
+.water-shimmer {
+  aspect-ratio: 2.7;
+  opacity: var(--lake-shimmer-opacity);
+  mix-blend-mode: screen;
+  overflow: hidden;
+  filter: brightness(1.02);
+}
+
+.water-shimmer::before,
+.water-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background:
+    linear-gradient(100deg, transparent 0 18%, rgba(255, 255, 255, 0.22) 22%, transparent 28% 48%, rgba(180, 240, 255, 0.18) 53%, transparent 60% 100%),
+    url("./assets/images/effects/ambient/water-shimmer.webp") center / cover;
+  opacity: 0.7;
+  mix-blend-mode: screen;
+  mask-image: linear-gradient(90deg, transparent 0%, #000 16%, #000 84%, transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 16%, #000 84%, transparent 100%);
+}
+
+.water-shimmer::after {
+  opacity: 0.42;
+}
+
+.water-shimmer--lake {
+  left: var(--lake-shimmer-left);
+  top: var(--lake-shimmer-top);
+  width: var(--lake-shimmer-width);
+  border-radius: 50%;
+  mask-image: radial-gradient(ellipse at 45% 52%, #000 0 47%, transparent 74%);
+  -webkit-mask-image: radial-gradient(ellipse at 45% 52%, #000 0 47%, transparent 74%);
+  animation: lakeBreath 11s ease-in-out infinite;
+}
+
+.water-shimmer--lake::before {
+  animation: lakeShimmerFlow 19s ease-in-out infinite;
+}
+
+.water-shimmer--lake::after {
+  animation: lakeShimmerFlowAlt 23s ease-in-out infinite;
+}
+
+.water-shimmer--river {
+  left: var(--river-shimmer-left);
+  top: var(--river-shimmer-top);
+  width: var(--river-shimmer-width);
+  opacity: var(--river-shimmer-opacity);
+  rotate: 44deg;
+  border-radius: 46%;
+  mask-image: linear-gradient(90deg, transparent 0%, #000 24%, #000 72%, transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 24%, #000 72%, transparent 100%);
+}
+
+.water-shimmer--river::before {
+  animation: riverShimmerLines 8.4s ease-in-out infinite;
+}
+
+.water-shimmer--river::after {
+  animation: riverShimmerLinesAlt 10.6s ease-in-out infinite;
+}
+
+.water-shimmer--river-stones {
+  left: 49.5%;
+  top: 64%;
+  width: clamp(76px, 7vw, 110px);
+  opacity: 0.32;
+  rotate: 58deg;
+  mask-image: radial-gradient(ellipse at 50% 50%, #000 0 36%, transparent 68%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 50%, #000 0 36%, transparent 68%);
+}
+
+.water-shimmer--lower-river {
+  left: var(--lower-river-shimmer-left);
+  top: var(--lower-river-shimmer-top);
+  width: var(--lower-river-shimmer-width);
+  opacity: var(--lower-river-shimmer-opacity);
+  rotate: 67deg;
+  border-radius: 48%;
+  mask-image: linear-gradient(90deg, transparent 0%, #000 22%, #000 76%, transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 22%, #000 76%, transparent 100%);
+}
+
+.water-shimmer--lower-river::before {
+  animation: lowerRiverShimmerLines 10.8s ease-in-out infinite;
+}
+
+.water-shimmer--lower-river::after {
+  animation: lowerRiverShimmerLinesAlt 13s ease-in-out infinite;
+}
+
+.leaf-drift {
+  width: clamp(22px, 2.4vw, 34px);
+  opacity: 0;
+  filter: drop-shadow(0 2px 5px rgba(7, 19, 12, 0.2));
+  animation: leafDrift 24s linear infinite;
+}
+
+.leaf-drift--one {
+  left: 18%;
+  top: 23%;
+}
+
+.leaf-drift--two {
+  left: 78%;
+  top: 36%;
+  animation-delay: 11s;
+  animation-duration: 29s;
+}
+
+.forest-glow {
+  width: clamp(18px, 2vw, 30px);
+  opacity: 0;
+  mix-blend-mode: screen;
+  animation: forestGlow 8.5s ease-in-out infinite;
+}
+
+.forest-glow--one {
+  left: 58%;
+  top: 47%;
+}
+
+.forest-glow--two {
+  left: 21%;
+  top: 58%;
+  animation-delay: 3.2s;
+}
+
+.forest-glow--three {
+  left: 74%;
+  top: 73%;
+  animation-delay: 6.1s;
+}
+
+.hidden-drop {
+  position: absolute;
+  z-index: 3;
+  width: clamp(16px, 1.5vw, 22px);
+  height: clamp(16px, 1.5vw, 22px);
+  margin-left: -10px;
+  margin-top: -10px;
+  border: 0;
+  border-radius: 50%;
+  background: url("./assets/images/effects/events/hidden-drop.webp") center / contain no-repeat;
+  box-shadow: 0 0 13px rgba(178, 248, 255, 0.58), 0 0 24px rgba(223, 255, 214, 0.32);
   cursor: pointer;
   opacity: 0;
-  transform: translate3d(0, 14px, 0);
-  backdrop-filter: blur(7px);
-  transition:
-    opacity 760ms ease,
-    transform 760ms ease,
-    background 180ms ease,
-    box-shadow 180ms ease;
+  animation: none;
+  pointer-events: none;
 }
 
-body.intro-finished .forest-button {
-  opacity: 1;
-  transform: translate3d(0, 0, 0);
-}
-
-body.intro-finished .forest-button:nth-child(1) {
-  transition-delay: 80ms, 80ms, 0ms, 0ms;
-}
-
-body.intro-finished .forest-button:nth-child(2) {
-  transition-delay: 230ms, 230ms, 0ms, 0ms;
-}
-
-body.intro-finished .forest-button:nth-child(3) {
-  transition-delay: 380ms, 380ms, 0ms, 0ms;
-}
-
-body.intro-finished .forest-button:nth-child(4) {
-  transition-delay: 530ms, 530ms, 0ms, 0ms;
-}
-
-.forest-button.primary {
-  background: rgba(255, 238, 174, 0.86);
-}
-
-.forest-button:focus-visible {
-  outline: 3px solid rgba(255, 248, 214, 0.74);
-  outline-offset: 3px;
-}
-
-.forest-button:hover {
-  background: rgba(255, 250, 226, 0.88);
-  box-shadow: 0 10px 24px rgba(9, 20, 15, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.62);
-}
-
-.memory-drop {
-  position: absolute;
-  left: 55.5%;
-  top: 58%;
-  width: 20px;
-  height: 25px;
-  border: 0;
-  border-radius: 50% 50% 58% 58%;
-  background:
-    radial-gradient(circle at 38% 26%, #ffffff 0 11%, transparent 12%),
-    radial-gradient(circle at 52% 62%, #bff8ff 0 15%, #72d6df 42%, rgba(63, 160, 154, 0.42) 72%, transparent 74%);
-  box-shadow: 0 0 13px rgba(178, 248, 255, 0.92), 0 0 26px rgba(223, 255, 214, 0.48);
-  cursor: pointer;
-  opacity: 0.74;
-  transform: translate(-50%, -50%) rotate(8deg) scale(0.88);
+body.intro-finished .hidden-drop {
+  opacity: 0.46;
   animation: memoryGlow 2.8s ease-in-out infinite;
   pointer-events: auto;
 }
 
-.memory-drop::after {
+.hidden-drop::after {
   content: "";
   position: absolute;
   left: 50%;
@@ -272,13 +590,156 @@ body.intro-finished .forest-button:nth-child(4) {
   height: 34px;
   border-radius: 50%;
   background: radial-gradient(circle, rgba(207, 255, 245, 0.3), transparent 66%);
-  transform: translate(-50%, -50%);
+  margin-left: -17px;
+  margin-top: -17px;
+}
+
+.hidden-drop--one {
+  left: 68.5%;
+  top: 66%;
+}
+
+.hidden-drop--two {
+  left: 24%;
+  top: 61%;
+  animation-delay: 1.4s;
+}
+
+.hidden-drop--three {
+  left: 83%;
+  top: 38%;
+  animation-delay: 2.7s;
+}
+
+.tap-effects {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.tap-ripple,
+.drag-spark,
+.memory-event-effect {
+  position: absolute;
+  left: var(--effect-x);
+  top: var(--effect-y);
+  pointer-events: none;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  mix-blend-mode: screen;
+}
+
+.tap-ripple {
+  width: 58px;
+  height: 58px;
+  margin-left: -29px;
+  margin-top: -29px;
+  background-image: url("./assets/images/effects/events/ripple-expand.webp");
+  opacity: 0;
+  animation: tapRipple 820ms ease-out forwards;
+}
+
+.drag-spark {
+  width: 22px;
+  height: 22px;
+  margin-left: -11px;
+  margin-top: -11px;
+  background-image: url("./assets/images/effects/ambient/spark.webp");
+  opacity: 0;
+  animation: dragSpark 620ms ease-out forwards;
+}
+
+.memory-event-effect {
+  opacity: 0;
+  mix-blend-mode: screen;
+  animation-fill-mode: forwards;
+}
+
+.memory-event-effect--glow {
+  width: 86px;
+  height: 86px;
+  margin-left: -43px;
+  margin-top: -43px;
+  background-image: url("./assets/images/effects/events/glow-expand.webp");
+  animation: memoryGlowExpand 980ms ease-out forwards;
+}
+
+.memory-event-effect--sparkle {
+  width: 82px;
+  height: 82px;
+  margin-left: -41px;
+  margin-top: -41px;
+  background-image: url("./assets/images/effects/events/sparkle-burst.webp");
+  animation: memorySparkleBurst 980ms ease-out forwards;
+}
+
+.memory-event-effect--ripple {
+  width: 102px;
+  height: 102px;
+  margin-left: -51px;
+  margin-top: -51px;
+  background-image: url("./assets/images/effects/events/ripple-expand.webp");
+  animation: memoryRippleExpand 1200ms ease-out forwards;
+}
+
+.memory-event-effect--fog {
+  width: 128px;
+  height: 90px;
+  margin-left: -64px;
+  margin-top: -45px;
+  background-image: url("./assets/images/effects/events/memory-fog.webp");
+  animation: memoryFog 1500ms ease-out forwards;
+  mix-blend-mode: normal;
+}
+
+.mint-guide {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 5;
+  width: clamp(40px, 4vw, 58px);
+  height: clamp(40px, 4vw, 58px);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate3d(-100px, -100px, 0);
+  transition: opacity 900ms ease;
+  will-change: transform;
+}
+
+body.intro-finished .mint-guide.is-active {
+  opacity: 0.82;
+}
+
+.mint-guide__image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 10px rgba(7, 18, 12, 0.28));
+  animation: mintFloat 4.6s ease-in-out infinite;
+  user-select: none;
+}
+
+.mint-guide__image--blink {
+  opacity: 0;
+}
+
+.mint-guide.is-blinking .mint-guide__image--normal {
+  opacity: 0;
+}
+
+.mint-guide.is-blinking .mint-guide__image--blink {
+  opacity: 1;
 }
 
 .forest-toast {
   position: absolute;
   left: 50%;
-  bottom: calc(max(20px, env(safe-area-inset-bottom)) + 122px);
+  bottom: calc(max(20px, env(safe-area-inset-bottom)) + 18px);
   z-index: 6;
   width: min(86vw, 420px);
   margin: 0;
@@ -302,7 +763,7 @@ body.intro-finished .forest-button:nth-child(4) {
   transform: translate(-50%, 0);
 }
 
-@keyframes forestCameraIntro {
+@keyframes mapContentIntro {
   0% {
     transform: translate3d(calc(-50% + var(--camera-start-x)), calc(-50% + var(--camera-start-y)), 0) scale(var(--camera-start-scale));
   }
@@ -325,114 +786,456 @@ body.intro-finished .forest-button:nth-child(4) {
   }
 }
 
+@keyframes mintFloat {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+
+  50% {
+    translate: 0 -5px;
+  }
+}
+
+@keyframes tapRipple {
+  0% {
+    opacity: 0.62;
+    scale: 0.42;
+  }
+
+  100% {
+    opacity: 0;
+    scale: 1.4;
+  }
+}
+
+@keyframes dragSpark {
+  0% {
+    opacity: 0.58;
+    scale: 0.42;
+  }
+
+  100% {
+    opacity: 0;
+    scale: 1.05;
+  }
+}
+
+@keyframes mistFloat {
+  0%,
+  100% {
+    translate: -3% 1%;
+    opacity: 0.16;
+  }
+
+  50% {
+    translate: 5% -3%;
+    opacity: 0.3;
+  }
+}
+
+@keyframes leafDrift {
+  0% {
+    opacity: 0;
+    translate: 0 0;
+    rotate: -8deg;
+  }
+
+  16% {
+    opacity: 0.3;
+  }
+
+  58% {
+    opacity: 0.22;
+  }
+
+  100% {
+    opacity: 0;
+    translate: 24vw 16vh;
+    rotate: 18deg;
+  }
+}
+
+@keyframes lakeRipple {
+  0% {
+    opacity: 0;
+    scale: 0.82;
+    filter: brightness(0.96);
+  }
+
+  18% {
+    opacity: 0.16;
+  }
+
+  100% {
+    opacity: 0;
+    scale: 1.18;
+    filter: brightness(1.04);
+  }
+}
+
+@keyframes lakeBreath {
+  0%,
+  100% {
+    opacity: calc(var(--lake-shimmer-opacity) * 0.62);
+    filter: brightness(0.98);
+  }
+
+  50% {
+    opacity: var(--lake-shimmer-opacity);
+    filter: brightness(1.08);
+  }
+}
+
+@keyframes lakeShimmerFlow {
+  0%,
+  100% {
+    opacity: 0.32;
+    translate: -5% 0;
+  }
+
+  50% {
+    opacity: 0.62;
+    translate: 5% -1%;
+  }
+}
+
+@keyframes lakeShimmerFlowAlt {
+  0%,
+  100% {
+    opacity: 0.2;
+    translate: 6% 1%;
+  }
+
+  50% {
+    opacity: 0.48;
+    translate: -4% 0;
+  }
+}
+
+@keyframes riverShimmerLines {
+  0%,
+  100% {
+    opacity: 0.32;
+    translate: -8% -3%;
+  }
+
+  43% {
+    opacity: 0.76;
+    translate: 4% 5%;
+  }
+
+  70% {
+    opacity: 0.48;
+  }
+}
+
+@keyframes riverShimmerLinesAlt {
+  0%,
+  100% {
+    opacity: 0.18;
+    translate: 6% 4%;
+  }
+
+  52% {
+    opacity: 0.54;
+    translate: -5% -4%;
+  }
+}
+
+@keyframes lowerRiverShimmerLines {
+  0%,
+  100% {
+    opacity: 0.24;
+    translate: -6% -5%;
+  }
+
+  50% {
+    opacity: 0.62;
+    translate: 5% 7%;
+  }
+}
+
+@keyframes lowerRiverShimmerLinesAlt {
+  0%,
+  100% {
+    opacity: 0.18;
+    translate: 5% 5%;
+  }
+
+  46% {
+    opacity: 0.5;
+    translate: -4% -6%;
+  }
+}
+
+@keyframes forestGlow {
+  0%,
+  100% {
+    opacity: 0;
+    scale: 0.7;
+  }
+
+  44% {
+    opacity: 0;
+  }
+
+  50% {
+    opacity: 0.42;
+    scale: 1;
+  }
+
+  58% {
+    opacity: 0;
+  }
+}
+
+@keyframes memoryGlowExpand {
+  0% {
+    opacity: 0.68;
+    scale: 0.28;
+  }
+
+  100% {
+    opacity: 0;
+    scale: 1.35;
+  }
+}
+
+@keyframes memorySparkleBurst {
+  0% {
+    opacity: 0;
+    scale: 0.6;
+  }
+
+  20% {
+    opacity: 0.58;
+  }
+
+  100% {
+    opacity: 0;
+    scale: 1.16;
+  }
+}
+
+@keyframes memoryRippleExpand {
+  0% {
+    opacity: 0.34;
+    scale: 0.42;
+  }
+
+  100% {
+    opacity: 0;
+    scale: 1.55;
+  }
+}
+
+@keyframes memoryFog {
+  0% {
+    opacity: 0;
+    translate: 0 6px;
+  }
+
+  18% {
+    opacity: 0.42;
+  }
+
+  100% {
+    opacity: 0;
+    translate: 0 -10px;
+  }
+}
+
+@keyframes waterfallBreath {
+  0% {
+    opacity: calc(var(--waterfall-opacity) * 0.8);
+    filter: brightness(1.02) blur(0.18px);
+  }
+
+  50% {
+    opacity: var(--waterfall-opacity);
+    filter: brightness(1.14) blur(0.18px);
+  }
+
+  100% {
+    opacity: calc(var(--waterfall-opacity) * 0.86);
+    filter: brightness(1.04) blur(0.18px);
+  }
+}
+
+@keyframes waterfallStrands {
+  0% {
+    translate: 0 -12%;
+  }
+
+  100% {
+    translate: 0 12%;
+  }
+}
+
+@keyframes fortuneSignDrop {
+  0% {
+    opacity: 0;
+    translate: 0 -34px;
+    rotate: -4deg;
+  }
+
+  58% {
+    opacity: var(--portal-opacity, 0.9);
+    translate: 0 5px;
+    rotate: 2deg;
+  }
+
+  78% {
+    translate: 0 -2px;
+    rotate: -1deg;
+  }
+
+  100% {
+    opacity: var(--portal-opacity, 0.9);
+    translate: 0 0;
+    rotate: 0deg;
+  }
+}
+
+@keyframes fortuneCaptionIn {
+  0% {
+    opacity: 0;
+    translate: -50% 5px;
+  }
+
+  100% {
+    opacity: 1;
+    translate: -50% 0;
+  }
+}
+
 @media (min-width: 760px) {
   :root {
     --camera-start-scale: 0.7;
-    --camera-end-scale: 1.28;
-    --camera-end-x: -2.5vw;
-    --camera-end-y: 6vh;
+    --camera-end-scale: 1.22;
+    --camera-end-x: -1vw;
+    --camera-end-y: 4vh;
     --camera-origin-x: 53%;
     --camera-origin-y: 47%;
   }
 
-  .forest-camera {
-    width: 188vh;
+  .map-content {
+    width: 159vh;
     min-width: 132vw;
     height: 106vh;
   }
 
-  .ui-buttons {
-    left: auto;
-    right: clamp(24px, 5vw, 72px);
-    bottom: clamp(24px, 7vh, 72px);
-    grid-template-columns: 1fr;
-    width: 190px;
-    transform: none;
-  }
-
   .forest-toast {
-    left: auto;
-    right: clamp(24px, 5vw, 72px);
-    bottom: clamp(242px, 36vh, 330px);
-    transform: translateY(10px);
+    bottom: clamp(22px, 5vh, 48px);
   }
 
   .forest-toast.is-visible {
-    transform: translateY(0);
+    transform: translate(-50%, 0);
   }
 }
 
 @media (max-width: 759px) {
   :root {
     --camera-start-scale: 0.54;
-    --camera-end-scale: 1.38;
-    --camera-end-x: -3vw;
-    --camera-end-y: 8vh;
+    --camera-end-scale: 1.32;
+    --camera-end-x: -2vw;
+    --camera-end-y: 6vh;
     --camera-origin-x: 53%;
     --camera-origin-y: 49%;
     --camera-duration: 4s;
   }
 
-  .forest-camera {
-    width: 192vh;
+  .map-content {
+    width: 162vh;
     min-width: 170vw;
     height: 108vh;
+  }
+
+  .leaf-drift--two,
+  .forest-glow--three,
+  .water-shimmer--river-stones,
+  .water-shimmer--lower-river {
+    display: none;
   }
 }
 
 @supports (width: max(1px, 2px)) {
-  .forest-camera {
-    width: max(150vw, calc(108vh * 16 / 9));
+  .map-content {
+    width: max(150vw, calc(108vh * 3 / 2));
     min-width: 0;
     height: 108vh;
   }
 
   @media (min-width: 760px) {
-    .forest-camera {
-      width: max(132vw, calc(106vh * 16 / 9));
+    .map-content {
+      width: max(132vw, calc(106vh * 3 / 2));
       height: 106vh;
     }
   }
 
   @media (max-width: 759px) {
-    .forest-camera {
-      width: max(170vw, calc(108vh * 16 / 9));
+    .map-content {
+      width: max(170vw, calc(108vh * 3 / 2));
       height: 108vh;
     }
   }
 }
 
 @supports (height: 100svh) and (width: max(1px, 2px)) {
-  .forest-camera {
-    width: max(150vw, calc(108svh * 16 / 9));
+  .map-content {
+    width: max(150vw, calc(108svh * 3 / 2));
     height: 108svh;
   }
 
   @media (min-width: 760px) {
-    .forest-camera {
-      width: max(132vw, calc(106svh * 16 / 9));
+    .map-content {
+      width: max(132vw, calc(106svh * 3 / 2));
       height: 106svh;
     }
   }
 
   @media (max-width: 759px) {
-    .forest-camera {
-      width: max(170vw, calc(108svh * 16 / 9));
+    .map-content {
+      width: max(170vw, calc(108svh * 3 / 2));
       height: 108svh;
     }
   }
 }
 
+@media (hover: none), (pointer: coarse) {
+  .mint-guide {
+    display: none;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tap-effects {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .forest-camera {
+  .map-content {
     animation-duration: 1ms;
   }
 
-  .memory-drop {
+  .hidden-drop,
+  .mint-guide__image,
+  .waterfall-flow,
+  .waterfall-flow::before,
+  .waterfall-flow::after,
+  .ambient-mist,
+  .lake-ripple,
+  .water-shimmer,
+  .water-shimmer::before,
+  .water-shimmer::after,
+  .leaf-drift,
+  .forest-glow {
     animation-duration: 4s;
   }
 
-  .forest-button,
+  .forest-portal,
   .forest-toast {
     transition-duration: 1ms;
   }

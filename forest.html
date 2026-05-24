@@ -8,15 +8,60 @@
 </head>
 <body>
   <main class="forest-scene" aria-label="TeaMerryの森を探索する入口">
-    <div class="forest-stage">
-      <div class="forest-camera">
-        <div class="forest-layer forest-layer--base">
-          <img src="./assets/images/forest.webp" alt="">
-        </div>
+    <div class="forest-stage viewport">
+      <div class="map-content" aria-label="森の中にある入口">
+        <img class="forest-bg" src="./assets/images/forest.webp" alt="">
 
-        <div class="forest-layer forest-layer--points">
-          <button class="memory-drop" type="button" aria-label="光る雫を調べる"></button>
-        </div>
+        <a class="forest-portal forest-portal--game" href="index.html" aria-label="雫ゲームへ">
+          <img src="./assets/images/ui/Forest_Dew_Game_J.webp" alt="">
+        </a>
+
+        <button class="forest-portal forest-portal--fortune" type="button" data-coming-soon="フォーチュンクッキー" aria-label="フォーチュンクッキー">
+          <img src="./assets/images/ui/FortuneCookie.webp" alt="">
+          <span class="portal-caption">キッズおみくじ</span>
+        </button>
+
+        <button class="forest-portal forest-portal--shrine" type="button" data-coming-soon="森のおみくじ" aria-label="森のおみくじ">
+          <img src="./assets/images/ui/Omikuji_J.webp" alt="">
+        </button>
+
+        <button class="forest-portal forest-portal--onsen" type="button" data-coming-soon="お茶の参り温泉郷" aria-label="お茶の参り温泉郷">
+          <img src="./assets/images/ui/chachajii_onsenkyou_J.webp" alt="">
+        </button>
+
+        <button class="forest-portal forest-portal--character" type="button" data-coming-soon="キャラクター" aria-label="キャラクター">
+          <img src="./assets/images/ui/characte_J%20.webp" alt="">
+        </button>
+
+        <button class="forest-portal forest-portal--artwork" type="button" data-coming-soon="作品" aria-label="作品">
+          <img src="./assets/images/ui/Artwork_Falls_J.webp" alt="">
+        </button>
+
+        <button class="forest-portal forest-portal--blog" type="button" data-coming-soon="ブログ" aria-label="ブログ">
+          <img src="./assets/images/ui/Memory_Cave_J2.webp" alt="">
+        </button>
+
+        <button class="forest-portal forest-portal--contact" type="button" data-coming-soon="お問い合わせ" aria-label="お問い合わせ">
+          <img src="./assets/images/ui/toiawase.webp" alt="">
+        </button>
+
+        <span class="waterfall-flow" aria-hidden="true"></span>
+        <img class="ambient-mist ambient-mist--falls" src="./assets/images/effects/ambient/mist.webp" alt="" aria-hidden="true">
+        <span class="lake-ripple lake-ripple--one" aria-hidden="true"></span>
+        <span class="lake-ripple lake-ripple--two" aria-hidden="true"></span>
+        <span class="water-shimmer water-shimmer--lake" aria-hidden="true"></span>
+        <span class="water-shimmer water-shimmer--river" aria-hidden="true"></span>
+        <span class="water-shimmer water-shimmer--river water-shimmer--river-stones" aria-hidden="true"></span>
+        <span class="water-shimmer water-shimmer--lower-river" aria-hidden="true"></span>
+        <img class="leaf-drift leaf-drift--one" src="./assets/images/effects/ambient/leaf-particle.webp" alt="" aria-hidden="true">
+        <img class="leaf-drift leaf-drift--two" src="./assets/images/effects/ambient/leaf-particle.webp" alt="" aria-hidden="true">
+        <img class="forest-glow forest-glow--one" src="./assets/images/effects/ambient/glow.webp" alt="" aria-hidden="true">
+        <img class="forest-glow forest-glow--two" src="./assets/images/effects/ambient/glow.webp" alt="" aria-hidden="true">
+        <img class="forest-glow forest-glow--three" src="./assets/images/effects/ambient/glow.webp" alt="" aria-hidden="true">
+
+        <button class="hidden-drop hidden-drop--one" type="button" aria-label="光る雫を調べる"></button>
+        <button class="hidden-drop hidden-drop--two" type="button" aria-label="光る雫を調べる"></button>
+        <button class="hidden-drop hidden-drop--three" type="button" aria-label="光る雫を調べる"></button>
       </div>
 
       <div class="forest-effect forest-effect--light" aria-hidden="true"></div>
@@ -24,17 +69,16 @@
       <div class="forest-vignette" aria-hidden="true"></div>
     </div>
 
+    <div class="tap-effects" aria-hidden="true"></div>
+    <div class="mint-guide" aria-hidden="true">
+      <img class="mint-guide__image mint-guide__image--normal" src="./assets/images/effects/mint-guide.webp" alt="">
+      <img class="mint-guide__image mint-guide__image--blink" src="./assets/images/effects/mint-guide-blink.webp" alt="">
+    </div>
+
     <section class="forest-title" aria-label="TeaMerry Forest">
       <p>Tiny World in a Teacup</p>
       <h1>TeaMerry Forest</h1>
     </section>
-
-    <nav class="ui-buttons" aria-label="森の入口メニュー">
-      <a class="forest-button primary" href="index.html">雫ゲーム</a>
-      <button class="forest-button" type="button" data-coming-soon="おみくじ">おみくじ</button>
-      <button class="forest-button" type="button" data-coming-soon="キャラクター">キャラクター</button>
-      <button class="forest-button" type="button" data-coming-soon="作品">作品</button>
-    </nav>
 
     <p class="forest-toast" role="status" aria-live="polite"></p>
   </main>

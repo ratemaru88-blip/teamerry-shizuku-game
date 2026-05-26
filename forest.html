@@ -58,6 +58,7 @@
 
       <div class="time-atmosphere" aria-hidden="true">
         <div class="time-atmosphere__mist"></div>
+        <div class="time-atmosphere__rain"></div>
         <div class="time-atmosphere__stars"></div>
         <div class="time-atmosphere__lamps"></div>
         <div class="time-atmosphere__tone"></div>
@@ -79,6 +80,27 @@
 
     <p class="forest-toast" role="status" aria-live="polite"></p>
     <p class="forest-narration" role="status" aria-live="polite"></p>
+
+    <aside class="debug-panel" aria-label="Debug Panel">
+      <div class="debug-panel__header">
+        <strong>Debug Panel</strong>
+        <button class="debug-panel__close" type="button" data-debug-hide aria-label="Debug Panelを閉じる">x</button>
+      </div>
+      <div class="debug-panel__grid">
+        <button type="button" data-debug-time="day">昼モード</button>
+        <button type="button" data-debug-time="evening">夕方モード</button>
+        <button type="button" data-debug-time="night">夜モード</button>
+        <button type="button" data-debug-toggle="rain" aria-pressed="false">雨OFF</button>
+        <button type="button" data-debug-toggle="mist" aria-pressed="false">霧OFF</button>
+        <button type="button" data-debug-toggle="stars" aria-pressed="false">星空OFF</button>
+        <button type="button" data-debug-action="bird">鳥出現テスト</button>
+        <button type="button" data-debug-action="se">SE再生テスト</button>
+      </div>
+      <label class="debug-panel__fast">
+        <input type="checkbox" data-debug-fast>
+        <span>高速モード</span>
+      </label>
+    </aside>
   </main>
 
   <script src="forest.js"></script>

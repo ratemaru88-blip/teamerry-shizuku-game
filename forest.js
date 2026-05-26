@@ -9,6 +9,7 @@
   const mapAtmosphere = document.querySelector(".map-atmosphere");
   const creatures = document.querySelector(".forest-creatures");
   const driftLayer = document.querySelector(".forest-drift");
+  const debugPanel = document.querySelector(".debug-panel");
 
   if (!scene || !map) {
     return;
@@ -120,6 +121,21 @@
   let audioContext = null;
   let activeTimeName = "";
   let soundscape = null;
+  const debugState = {
+    timeOverride: "",
+    toggles: {
+      rain: false,
+      mist: false,
+      stars: false,
+    },
+    fastMode: false,
+    timers: {
+      ambient: 0,
+      bird: 0,
+      bottle: 0,
+      narration: 0,
+    },
+  };
 
   const parseLength = (value, axis) => {
     const text = String(value || "0").trim();
@@ -196,15 +212,16 @@
     }, 3600);
   };
 
-  const applyTimePreset = () => {
+  const applyTimePreset = (forcedName = debugState.timeOverride) => {
     const hour = new Date().getHours();
-    const name = hour >= 5 && hour < 10
+    const automaticName = hour >= 5 && hour < 10
       ? "morning"
       : hour >= 10 && hour < 16
         ? "day"
         : hour >= 16 && hour < 19
           ? "evening"
           : "night";
+    const name = timePresets[forcedName] ? forcedName : automaticName;
     const preset = timePresets[name];
     activeTimeName = name;
 
@@ -216,9 +233,10 @@
     scene.style.setProperty("--time-warmth", preset.warmth);
     scene.style.setProperty("--time-coolness", preset.coolness);
     scene.style.setProperty("--time-darkness", preset.darkness);
-    scene.style.setProperty("--mist-opacity", preset.mist);
-    scene.style.setProperty("--star-opacity", preset.stars);
+    scene.style.setProperty("--mist-opacity", debugState.toggles.mist ? Math.max(preset.mist, 0.42) : preset.mist);
+    scene.style.setProperty("--star-opacity", debugState.toggles.stars ? Math.max(preset.stars, 0.78) : preset.stars);
     scene.style.setProperty("--lamp-opacity", preset.lamps);
+    scene.style.setProperty("--rain-opacity", debugState.toggles.rain ? 0.34 : 0);
     scene.style.setProperty("--glow-boost", preset.glow);
     updateSoundscape();
   };
@@ -324,11 +342,34 @@
     particle.addEventListener("animationend", () => particle.remove(), { once: true });
   };
 
-  const scheduleAmbient = () => {
-    window.setTimeout(() => {
+  const getDebugDelay = (normalMin, normalMax, fastMin, fastMax) => {
+    return debugState.fastMode
+      ? randomBetween(fastMin, fastMax)
+      : randomBetween(normalMin, normalMax);
+  };
+
+  const setDebugTimer = (name, callback, delay) => {
+    window.clearTimeout(debugState.timers[name]);
+    debugState.timers[name] = window.setTimeout(callback, delay);
+  };
+
+  const restartTimedEvents = () => {
+    Object.keys(debugState.timers).forEach((name) => {
+      window.clearTimeout(debugState.timers[name]);
+      debugState.timers[name] = 0;
+    });
+
+    scheduleAmbient(debugState.fastMode ? 800 : 2600);
+    scheduleNarration(debugState.fastMode ? 3000 : 9000);
+    scheduleBird(debugState.fastMode ? 5000 : 14000);
+    scheduleBottle(debugState.fastMode ? 5200 : 18000);
+  };
+
+  const scheduleAmbient = (delay = getDebugDelay(2400, 7600, 900, 1800)) => {
+    setDebugTimer("ambient", () => {
       addAmbientParticle();
       scheduleAmbient();
-    }, randomBetween(2400, 7600));
+    }, delay);
   };
 
   const setBirdFrame = (bird, frame) => {
@@ -408,13 +449,13 @@
     window.setTimeout(() => flyAwayBird(bird), randomBetween(9000, 17000));
   };
 
-  const scheduleBird = () => {
-    window.setTimeout(() => {
+  const scheduleBird = (delay = getDebugDelay(24000, 62000, 3000, 5200)) => {
+    setDebugTimer("bird", () => {
       if (Math.random() < 0.72) {
         spawnBird();
       }
       scheduleBird();
-    }, randomBetween(24000, 62000));
+    }, delay);
   };
 
   const showBottleLetter = (message) => {
@@ -465,22 +506,22 @@
     bottle.addEventListener("animationend", () => bottle.remove(), { once: true });
   };
 
-  const scheduleBottle = () => {
-    window.setTimeout(() => {
+  const scheduleBottle = (delay = getDebugDelay(36000, 86000, 5000, 7600)) => {
+    setDebugTimer("bottle", () => {
       if (Math.random() < 0.64) {
         spawnBottle();
       }
       scheduleBottle();
-    }, randomBetween(36000, 86000));
+    }, delay);
   };
 
-  const scheduleNarration = () => {
-    window.setTimeout(() => {
+  const scheduleNarration = (delay = getDebugDelay(26000, 74000, 3000, 5000)) => {
+    setDebugTimer("narration", () => {
       if (Math.random() < 0.78) {
         showNarration();
       }
       scheduleNarration();
-    }, randomBetween(26000, 74000));
+    }, delay);
   };
 
   const addScreenEffect = (className, x, y) => {
@@ -514,6 +555,101 @@
     });
   };
 
+  const updateDebugButtons = () => {
+    if (!debugPanel) {
+      return;
+    }
+
+    debugPanel.querySelectorAll("[data-debug-time]").forEach((button) => {
+      button.classList.toggle("is-active", button.dataset.debugTime === debugState.timeOverride);
+    });
+
+    debugPanel.querySelectorAll("[data-debug-toggle]").forEach((button) => {
+      const name = button.dataset.debugToggle;
+      const active = Boolean(debugState.toggles[name]);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+      button.textContent = `${name === "rain" ? "雨" : name === "mist" ? "霧" : "星空"}${active ? "ON" : "OFF"}`;
+    });
+  };
+
+  const setupDebugPanel = () => {
+    if (!debugPanel) {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    let panelSetting = "";
+    try {
+      if (params.get("debug") === "1") {
+        window.localStorage.removeItem("teamerryForestDebugPanel");
+      }
+      panelSetting = window.localStorage.getItem("teamerryForestDebugPanel") || "";
+    } catch (error) {
+      panelSetting = "";
+    }
+
+    if (params.get("debug") === "0" || panelSetting === "off") {
+      document.body.classList.add("debug-panel-hidden");
+    }
+
+    debugPanel.querySelectorAll("[data-debug-time]").forEach((button) => {
+      button.addEventListener("click", () => {
+        debugState.timeOverride = button.dataset.debugTime || "";
+        applyTimePreset();
+        updateDebugButtons();
+        showToast(`${button.textContent}に切り替えました。`);
+      });
+    });
+
+    debugPanel.querySelectorAll("[data-debug-toggle]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const name = button.dataset.debugToggle;
+        debugState.toggles[name] = !debugState.toggles[name];
+        applyTimePreset();
+        updateDebugButtons();
+      });
+    });
+
+    const fastInput = debugPanel.querySelector("[data-debug-fast]");
+    if (fastInput) {
+      fastInput.addEventListener("change", () => {
+        debugState.fastMode = fastInput.checked;
+        restartTimedEvents();
+        showToast(debugState.fastMode ? "時間差イベントを高速化しました。" : "時間差イベントを通常速度に戻しました。");
+      });
+    }
+
+    const hideButton = debugPanel.querySelector("[data-debug-hide]");
+    if (hideButton) {
+      hideButton.addEventListener("click", () => {
+        document.body.classList.add("debug-panel-hidden");
+        try {
+          window.localStorage.setItem("teamerryForestDebugPanel", "off");
+        } catch (error) {
+          // The query parameter still supports production hiding when storage is unavailable.
+        }
+      });
+    }
+
+    const birdButton = debugPanel.querySelector('[data-debug-action="bird"]');
+    if (birdButton) {
+      birdButton.addEventListener("click", () => {
+        spawnBird();
+      });
+    }
+
+    const soundButton = debugPanel.querySelector('[data-debug-action="se"]');
+    if (soundButton) {
+      soundButton.addEventListener("click", () => {
+        ensureAudio();
+        playSoftTone(740, 0.18, 0.018);
+        playForestSound("leaf");
+      });
+    }
+
+    updateDebugButtons();
+  };
+
   const onCameraIntroEnd = (event) => {
     if (event.target !== map) {
       return;
@@ -533,7 +669,7 @@
   scene.addEventListener("pointerdown", (event) => {
     ensureAudio();
 
-    if (!state.enabled || event.target.closest(".forest-portal") || event.target.closest(".hidden-drop") || event.target.closest(".bottle-mail") || event.target.closest(".forest-bird")) {
+    if (!state.enabled || event.target.closest(".debug-panel") || event.target.closest(".forest-portal") || event.target.closest(".hidden-drop") || event.target.closest(".bottle-mail") || event.target.closest(".forest-bird")) {
       return;
     }
 
@@ -612,13 +748,11 @@
     });
   });
 
+  setupDebugPanel();
   applyTimePreset();
   window.setInterval(applyTimePreset, 60 * 1000);
 
-  window.setTimeout(scheduleAmbient, 2600);
-  window.setTimeout(scheduleNarration, 9000);
-  window.setTimeout(scheduleBird, 14000);
-  window.setTimeout(scheduleBottle, 18000);
+  restartTimedEvents();
 
   if (mintGuide && isFinePointer && !reduceMotion) {
     const mint = {

@@ -64,3 +64,45 @@ Open:
 ```text
 file:///C:/Users/kakao/Desktop/shizuku-game/forest.html?debug=1
 ```
+
+## Current Local Status
+
+GitHub push is paused because this PC is not authenticated with GitHub yet.
+
+Local changes already prepared:
+
+- `forest.html`: Added the Debug Panel markup and rain layer.
+- `forest.css`: Added Debug Panel styling, mobile-safe layout, rain effect, and fixed-ratio forest map sizing.
+- `forest.js`: Added debug controls, forced time modes, rain/mist/star toggles, bird and SE tests, and fast event timing.
+- `.nojekyll`: Added for GitHub Pages static hosting.
+- `README.md`: Added mobile debug and deploy instructions.
+
+Local commits waiting to be pushed:
+
+```text
+10e3b9b Add forest debug panel and deploy notes
+0264f20 森画面の環境演出を追加
+```
+
+## Later Push Steps
+
+After GitHub authentication is available on this PC:
+
+```powershell
+cd C:\Users\kakao\Desktop\shizuku-game
+git status --short --branch
+git push origin main
+```
+
+If Git asks for authentication, sign in to GitHub with the browser or Git Credential Manager prompt.
+
+After push:
+
+1. Wait for GitHub Pages or Vercel to redeploy.
+2. Open this URL on a phone:
+
+```text
+https://ratemaru88-blip.github.io/teamerry-shizuku-game/forest.html?debug=1
+```
+
+3. Use `?debug=0` when checking the production-style view without the Debug Panel.

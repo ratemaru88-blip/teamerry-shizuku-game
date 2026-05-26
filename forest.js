@@ -3,8 +3,12 @@
   const map = document.querySelector(".map-content");
   const drops = document.querySelectorAll(".hidden-drop");
   const toast = document.querySelector(".forest-toast");
+  const narration = document.querySelector(".forest-narration");
   const tapEffects = document.querySelector(".tap-effects");
   const mintGuide = document.querySelector(".mint-guide");
+  const mapAtmosphere = document.querySelector(".map-atmosphere");
+  const creatures = document.querySelector(".forest-creatures");
+  const driftLayer = document.querySelector(".forest-drift");
 
   if (!scene || !map) {
     return;
@@ -21,12 +25,101 @@
     startY: 0,
     originX: 0,
     originY: 0,
-    lastSparkAt: 0,
   };
 
   const isCoarsePointer = window.matchMedia("(hover: none), (pointer: coarse)").matches;
   const isFinePointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const randomBetween = (min, max) => min + Math.random() * (max - min);
+  const pick = (items) => items[Math.floor(Math.random() * items.length)];
+
+  const timePresets = {
+    morning: {
+      brightness: 1.03,
+      saturate: 0.9,
+      contrast: 0.94,
+      warmth: "rgba(255, 247, 219, 0.08)",
+      coolness: "rgba(229, 242, 255, 0.1)",
+      darkness: "rgba(8, 18, 22, 0.02)",
+      mist: 0.34,
+      stars: 0,
+      lamps: 0.04,
+      glow: 0.04,
+    },
+    day: {
+      brightness: 1.08,
+      saturate: 1,
+      contrast: 0.98,
+      warmth: "rgba(255, 242, 205, 0.04)",
+      coolness: "rgba(206, 239, 255, 0.05)",
+      darkness: "rgba(4, 10, 18, 0)",
+      mist: 0.09,
+      stars: 0,
+      lamps: 0,
+      glow: 0,
+    },
+    evening: {
+      brightness: 0.88,
+      saturate: 0.94,
+      contrast: 1,
+      warmth: "rgba(255, 142, 92, 0.18)",
+      coolness: "rgba(91, 66, 112, 0.07)",
+      darkness: "rgba(24, 10, 22, 0.1)",
+      mist: 0.16,
+      stars: 0.02,
+      lamps: 0.18,
+      glow: 0.08,
+    },
+    night: {
+      brightness: 0.52,
+      saturate: 0.72,
+      contrast: 1.06,
+      warmth: "rgba(255, 181, 103, 0.05)",
+      coolness: "rgba(75, 105, 162, 0.18)",
+      darkness: "rgba(3, 8, 19, 0.46)",
+      mist: 0.12,
+      stars: 0.72,
+      lamps: 0.44,
+      glow: 0.18,
+    },
+  };
+
+  const narrationLines = [
+    "今日は霧が深いようです。",
+    "湖が静かな日です。",
+    "森が少し眠たそうです。",
+    "どこかで羽音がしました。",
+    "川の音が、少し近く聞こえます。",
+    "木々の影がゆっくり伸びています。",
+  ];
+
+  const bottleMessages = [
+    "昨日の夜、\n湖にはたくさんの星が映っていました。",
+    "今日は深い霧の予感がします。",
+    "小鳥たちが橋の近くで羽を休めていました。",
+    "流れの遅い場所に、光が少しだけ残っています。",
+    "森は今朝、静かに目を覚ましたようです。",
+  ];
+
+  const birdPerches = [
+    { x: 28, y: 42, scale: 0.84 },
+    { x: 44, y: 35, scale: 0.78 },
+    { x: 58, y: 47, scale: 0.82 },
+    { x: 74, y: 41, scale: 0.72 },
+    { x: 36, y: 61, scale: 0.76 },
+  ];
+
+  const bottleRoutes = [
+    { x: 63, y: 64, midX: "-4vw", midY: "1.4vh", endX: "-17vw", endY: "4vh" },
+    { x: 80, y: 60, midX: "-6vw", midY: "-1vh", endX: "-20vw", endY: "2.5vh" },
+    { x: 47, y: 69, midX: "5vw", midY: "1vh", endX: "17vw", endY: "-2vh" },
+  ];
+
+  let currentBird = null;
+  let audioReady = false;
+  let audioContext = null;
+  let activeTimeName = "";
+  let soundscape = null;
 
   const parseLength = (value, axis) => {
     const text = String(value || "0").trim();
@@ -103,6 +196,293 @@
     }, 3600);
   };
 
+  const applyTimePreset = () => {
+    const hour = new Date().getHours();
+    const name = hour >= 5 && hour < 10
+      ? "morning"
+      : hour >= 10 && hour < 16
+        ? "day"
+        : hour >= 16 && hour < 19
+          ? "evening"
+          : "night";
+    const preset = timePresets[name];
+    activeTimeName = name;
+
+    scene.classList.remove("forest-time--morning", "forest-time--day", "forest-time--evening", "forest-time--night");
+    scene.classList.add(`forest-time--${name}`);
+    scene.style.setProperty("--time-brightness", preset.brightness);
+    scene.style.setProperty("--time-saturate", preset.saturate);
+    scene.style.setProperty("--time-contrast", preset.contrast);
+    scene.style.setProperty("--time-warmth", preset.warmth);
+    scene.style.setProperty("--time-coolness", preset.coolness);
+    scene.style.setProperty("--time-darkness", preset.darkness);
+    scene.style.setProperty("--mist-opacity", preset.mist);
+    scene.style.setProperty("--star-opacity", preset.stars);
+    scene.style.setProperty("--lamp-opacity", preset.lamps);
+    scene.style.setProperty("--glow-boost", preset.glow);
+    updateSoundscape();
+  };
+
+  const ensureAudio = () => {
+    if (audioReady) {
+      return;
+    }
+
+    const AudioCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtor) {
+      return;
+    }
+
+    audioContext = new AudioCtor();
+    soundscape = {
+      river: new Audio("./assets/sounds/river_sound1.mp3"),
+      bird: new Audio("./assets/sounds/カッコウの鳴き声.mp3"),
+      leaf: new Audio("./assets/sounds/leaf_soft.mp3"),
+    };
+    soundscape.river.loop = true;
+    soundscape.river.volume = 0.018;
+    soundscape.bird.volume = 0.035;
+    soundscape.leaf.volume = 0.025;
+    soundscape.river.play().catch(() => {});
+    audioReady = true;
+    updateSoundscape();
+  };
+
+  const playForestSound = (name) => {
+    if (!soundscape || reduceMotion) {
+      return;
+    }
+
+    const sound = soundscape[name];
+    if (!sound) {
+      return;
+    }
+
+    sound.currentTime = 0;
+    sound.play().catch(() => {});
+  };
+
+  const updateSoundscape = () => {
+    if (!soundscape) {
+      return;
+    }
+
+    soundscape.river.volume = 0.018;
+  };
+
+  const playSoftTone = (frequency, duration = 0.18, volume = 0.018) => {
+    if (!audioContext || reduceMotion) {
+      return;
+    }
+
+    const now = audioContext.currentTime;
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(frequency, now);
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(volume, now + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    osc.connect(gain);
+    gain.connect(audioContext.destination);
+    osc.start(now);
+    osc.stop(now + duration + 0.04);
+  };
+
+  const showNarration = (message = pick(narrationLines)) => {
+    if (!narration) {
+      return;
+    }
+
+    narration.textContent = message;
+    narration.classList.add("is-visible");
+    window.clearTimeout(showNarration.timer);
+    showNarration.timer = window.setTimeout(() => {
+      narration.classList.remove("is-visible");
+    }, 5200);
+  };
+
+  const addAmbientParticle = () => {
+    if (!mapAtmosphere || reduceMotion) {
+      return;
+    }
+
+    const kind = pick(["spark", "leaf", "shimmer", "ripple", "glow"]);
+    const particle = document.createElement("span");
+    const watery = kind === "shimmer" || kind === "ripple";
+    const size = watery ? randomBetween(38, 86) : randomBetween(16, 48);
+
+    particle.className = `ambient-particle ambient-particle--${kind}`;
+    particle.style.setProperty("--ambient-x", `${watery ? randomBetween(45, 84) : randomBetween(8, 92)}%`);
+    particle.style.setProperty("--ambient-y", `${watery ? randomBetween(56, 73) : randomBetween(18, 76)}%`);
+    particle.style.setProperty("--ambient-size", `${size}px`);
+    particle.style.setProperty("--ambient-opacity", watery ? randomBetween(0.13, 0.26) : randomBetween(0.08, 0.2));
+    particle.style.setProperty("--ambient-duration", `${randomBetween(5.8, 11.5)}s`);
+    particle.style.setProperty("--ambient-drift-x", `${randomBetween(-34, 34)}px`);
+    particle.style.setProperty("--ambient-drift-y", `${randomBetween(-28, 18)}px`);
+    mapAtmosphere.append(particle);
+    particle.addEventListener("animationend", () => particle.remove(), { once: true });
+  };
+
+  const scheduleAmbient = () => {
+    window.setTimeout(() => {
+      addAmbientParticle();
+      scheduleAmbient();
+    }, randomBetween(2400, 7600));
+  };
+
+  const setBirdFrame = (bird, frame) => {
+    const image = bird.querySelector("img");
+    if (image) {
+      image.src = `./assets/birds/character/${frame}`;
+    }
+  };
+
+  const flyAwayBird = (bird = currentBird) => {
+    if (!bird || bird.classList.contains("is-flying")) {
+      return;
+    }
+
+    window.clearInterval(bird.lookTimer);
+    window.clearInterval(bird.flyTimer);
+    bird.classList.add("is-flying");
+    bird.style.setProperty("--bird-fly-x", `${randomBetween(-140, 160)}px`);
+    bird.style.setProperty("--bird-fly-y", `${randomBetween(-130, -72)}px`);
+    playSoftTone(520, 0.1, 0.012);
+    playForestSound("leaf");
+
+    const frames = ["bird-fly-1.webp", "bird-fly-2.webp", "bird-fly-3.webp"];
+    let frame = 0;
+    bird.flyTimer = window.setInterval(() => {
+      setBirdFrame(bird, frames[frame % frames.length]);
+      frame += 1;
+    }, 180);
+
+    window.setTimeout(() => {
+      window.clearInterval(bird.flyTimer);
+      bird.remove();
+      if (currentBird === bird) {
+        currentBird = null;
+      }
+    }, 2700);
+  };
+
+  const spawnBird = () => {
+    if (!creatures || currentBird || reduceMotion) {
+      return;
+    }
+
+    const perch = pick(birdPerches);
+    const bird = document.createElement("button");
+    const image = document.createElement("img");
+    bird.type = "button";
+    bird.className = "forest-bird";
+    bird.tabIndex = -1;
+    bird.style.setProperty("--bird-x", `${perch.x}%`);
+    bird.style.setProperty("--bird-y", `${perch.y}%`);
+    bird.style.setProperty("--bird-scale", perch.scale);
+    image.src = "./assets/birds/character/bird-idle.webp";
+    image.alt = "";
+    bird.append(image);
+    creatures.append(bird);
+    currentBird = bird;
+    playSoftTone(880, 0.16, 0.008);
+    playForestSound("bird");
+
+    bird.lookTimer = window.setInterval(() => {
+      setBirdFrame(bird, pick([
+        "bird-idle.webp",
+        "bird-look-left.webp",
+        "bird-look-right.webp",
+        "bird-upward.webp",
+        "bird-downward1.webp",
+      ]));
+    }, randomBetween(1400, 2800));
+
+    bird.addEventListener("pointerenter", () => flyAwayBird(bird));
+    bird.addEventListener("click", (event) => {
+      event.preventDefault();
+      flyAwayBird(bird);
+    });
+
+    window.setTimeout(() => flyAwayBird(bird), randomBetween(9000, 17000));
+  };
+
+  const scheduleBird = () => {
+    window.setTimeout(() => {
+      if (Math.random() < 0.72) {
+        spawnBird();
+      }
+      scheduleBird();
+    }, randomBetween(24000, 62000));
+  };
+
+  const showBottleLetter = (message) => {
+    let letter = document.querySelector(".forest-letter");
+    if (!letter) {
+      letter = document.createElement("p");
+      letter.className = "forest-letter";
+      scene.append(letter);
+    }
+
+    letter.textContent = message;
+    letter.classList.add("is-visible");
+    showNarration(message);
+    window.clearTimeout(showBottleLetter.timer);
+    showBottleLetter.timer = window.setTimeout(() => {
+      letter.classList.remove("is-visible");
+    }, 6600);
+  };
+
+  const spawnBottle = () => {
+    if (!driftLayer || reduceMotion) {
+      return;
+    }
+
+    const route = pick(bottleRoutes);
+    const bottle = document.createElement("button");
+    bottle.type = "button";
+    bottle.className = "bottle-mail";
+    bottle.setAttribute("aria-label", "流れてきたボトルメールを読む");
+    bottle.style.setProperty("--bottle-x", `${route.x}%`);
+    bottle.style.setProperty("--bottle-y", `${route.y}%`);
+    bottle.style.setProperty("--bottle-mid-x", route.midX);
+    bottle.style.setProperty("--bottle-mid-y", route.midY);
+    bottle.style.setProperty("--bottle-end-x", route.endX);
+    bottle.style.setProperty("--bottle-end-y", route.endY);
+    const tilt = randomBetween(-10, 10);
+    bottle.style.setProperty("--bottle-tilt", `${tilt}deg`);
+    bottle.style.setProperty("--bottle-mid-tilt", `${tilt * -0.8}deg`);
+    bottle.style.setProperty("--bottle-duration", `${randomBetween(22, 34)}s`);
+    driftLayer.append(bottle);
+
+    bottle.addEventListener("click", (event) => {
+      event.preventDefault();
+      showBottleLetter(pick(bottleMessages));
+      playSoftTone(660, 0.2, 0.012);
+      bottle.remove();
+    });
+    bottle.addEventListener("animationend", () => bottle.remove(), { once: true });
+  };
+
+  const scheduleBottle = () => {
+    window.setTimeout(() => {
+      if (Math.random() < 0.64) {
+        spawnBottle();
+      }
+      scheduleBottle();
+    }, randomBetween(36000, 86000));
+  };
+
+  const scheduleNarration = () => {
+    window.setTimeout(() => {
+      if (Math.random() < 0.78) {
+        showNarration();
+      }
+      scheduleNarration();
+    }, randomBetween(26000, 74000));
+  };
+
   const addScreenEffect = (className, x, y) => {
     if (!tapEffects) {
       return;
@@ -151,7 +531,9 @@
   }, 4600);
 
   scene.addEventListener("pointerdown", (event) => {
-    if (!state.enabled || event.target.closest(".forest-portal") || event.target.closest(".hidden-drop")) {
+    ensureAudio();
+
+    if (!state.enabled || event.target.closest(".forest-portal") || event.target.closest(".hidden-drop") || event.target.closest(".bottle-mail") || event.target.closest(".forest-bird")) {
       return;
     }
 
@@ -170,6 +552,17 @@
   });
 
   scene.addEventListener("pointermove", (event) => {
+    if (currentBird && event.pointerType === "mouse") {
+      const rect = currentBird.getBoundingClientRect();
+      const birdX = rect.left + rect.width / 2;
+      const birdY = rect.top + rect.height / 2;
+      const distance = Math.hypot(event.clientX - birdX, event.clientY - birdY);
+
+      if (distance < 72) {
+        flyAwayBird(currentBird);
+      }
+    }
+
     if (!state.dragging || event.pointerId !== state.pointerId) {
       return;
     }
@@ -178,10 +571,6 @@
     state.y = state.originY + event.clientY - state.startY;
     renderMap();
 
-    if (isCoarsePointer && performance.now() - state.lastSparkAt > 140) {
-      state.lastSparkAt = performance.now();
-      addScreenEffect("drag-spark", event.clientX, event.clientY);
-    }
   });
 
   const endDrag = (event) => {
@@ -222,6 +611,14 @@
       showToast("雫の中に、小さな森の記憶が映っています。");
     });
   });
+
+  applyTimePreset();
+  window.setInterval(applyTimePreset, 60 * 1000);
+
+  window.setTimeout(scheduleAmbient, 2600);
+  window.setTimeout(scheduleNarration, 9000);
+  window.setTimeout(scheduleBird, 14000);
+  window.setTimeout(scheduleBottle, 18000);
 
   if (mintGuide && isFinePointer && !reduceMotion) {
     const mint = {

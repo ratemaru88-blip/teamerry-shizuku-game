@@ -15,9 +15,16 @@
   --tea-cream: #fff6db;
   --leaf-deep: #13251d;
   --leaf-shadow: #09140f;
-  --falls-mist-left: 53.4%;
-  --falls-mist-top: 42.5%;
-  --falls-mist-width: clamp(112px, 11vw, 170px);
+  --time-brightness: 0.9;
+  --time-saturate: 0.95;
+  --time-contrast: 0.97;
+  --time-warmth: rgba(255, 238, 196, 0.03);
+  --time-coolness: rgba(204, 226, 255, 0.04);
+  --time-darkness: rgba(4, 10, 18, 0);
+  --mist-opacity: 0.12;
+  --star-opacity: 0;
+  --lamp-opacity: 0;
+  --glow-boost: 0;
 }
 
 * {
@@ -100,8 +107,273 @@ a {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: saturate(0.95) contrast(0.97) brightness(0.9);
+  filter: saturate(var(--time-saturate)) contrast(var(--time-contrast)) brightness(var(--time-brightness));
   pointer-events: none;
+  transition: filter 12s ease;
+}
+
+.time-atmosphere {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.time-atmosphere__tone,
+.time-atmosphere__mist,
+.time-atmosphere__stars,
+.time-atmosphere__lamps {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transition: opacity 12s ease, background 12s ease, filter 12s ease;
+}
+
+.time-atmosphere__tone {
+  z-index: 2;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(255, 255, 246, 0.1), transparent 28%),
+    linear-gradient(180deg, var(--time-coolness), var(--time-warmth) 46%, var(--time-darkness));
+  mix-blend-mode: soft-light;
+  opacity: 0.78;
+}
+
+.time-atmosphere__mist {
+  z-index: 1;
+  background:
+    url("./assets/images/effects/ambient/mist.webp") 12% 58% / 34% auto no-repeat,
+    url("./assets/images/effects/ambient/mist.webp") 78% 50% / 42% auto no-repeat,
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent 46%);
+  filter: blur(0.4px);
+  mix-blend-mode: screen;
+  opacity: var(--mist-opacity);
+  animation: forestMistDrift 46s ease-in-out infinite alternate;
+}
+
+.time-atmosphere__stars {
+  z-index: 3;
+  opacity: var(--star-opacity);
+  background:
+    radial-gradient(circle at 18% 17%, rgba(255, 248, 215, 0.9) 0 1px, transparent 1.7px),
+    radial-gradient(circle at 34% 9%, rgba(222, 245, 255, 0.74) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 58% 15%, rgba(255, 248, 215, 0.86) 0 1px, transparent 1.7px),
+    radial-gradient(circle at 74% 8%, rgba(222, 245, 255, 0.72) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 89% 22%, rgba(255, 248, 215, 0.82) 0 1px, transparent 1.8px);
+  mix-blend-mode: screen;
+  animation: starBreath 7s ease-in-out infinite;
+}
+
+.time-atmosphere__stars::after,
+.time-atmosphere__lamps::before {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.time-atmosphere__stars::after {
+  left: 73%;
+  top: 11%;
+  width: 96px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(255, 250, 222, 0.9), transparent);
+  opacity: 0;
+  rotate: -17deg;
+  animation: shootingStar 26s 9s ease-in-out infinite;
+}
+
+.time-atmosphere__lamps {
+  z-index: 4;
+  opacity: var(--lamp-opacity);
+  background:
+    radial-gradient(circle at 21% 52%, rgba(255, 204, 112, 0.24), transparent 4.6%),
+    radial-gradient(circle at 47% 43%, rgba(255, 208, 119, 0.16), transparent 3.8%),
+    radial-gradient(circle at 5% 83%, rgba(255, 189, 105, 0.18), transparent 5.2%);
+  filter: blur(2px);
+  mix-blend-mode: screen;
+  animation: lampFlicker 5.8s ease-in-out infinite;
+}
+
+.map-atmosphere,
+.forest-creatures,
+.forest-drift {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.map-atmosphere {
+  z-index: 1;
+}
+
+.forest-drift {
+  z-index: 4;
+}
+
+.forest-creatures {
+  z-index: 4;
+}
+
+.ambient-particle {
+  position: absolute;
+  left: var(--ambient-x);
+  top: var(--ambient-y);
+  width: var(--ambient-size);
+  height: var(--ambient-size);
+  margin-left: calc(var(--ambient-size) * -0.5);
+  margin-top: calc(var(--ambient-size) * -0.5);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  opacity: 0;
+  pointer-events: none;
+  animation: ambientFade var(--ambient-duration) ease-in-out forwards;
+}
+
+.ambient-particle--spark {
+  background-image: url("./assets/images/effects/ambient/spark.webp");
+  mix-blend-mode: screen;
+  filter: brightness(calc(0.86 + var(--glow-boost)));
+}
+
+.ambient-particle--leaf {
+  background-image: url("./assets/images/effects/ambient/leaf-particle.webp");
+  animation-name: leafWander;
+}
+
+.ambient-particle--shimmer {
+  background-image: url("./assets/images/effects/ambient/water-shimmer.webp");
+  mix-blend-mode: screen;
+  animation-name: waterShimmer;
+}
+
+.ambient-particle--ripple {
+  background-image: url("./assets/images/effects/ambient/lake-ripple.webp");
+  mix-blend-mode: screen;
+  animation-name: lakeRipple;
+}
+
+.ambient-particle--glow {
+  background-image: url("./assets/images/effects/ambient/glow.webp");
+  mix-blend-mode: screen;
+  filter: brightness(calc(0.92 + var(--glow-boost)));
+}
+
+.forest-bird {
+  position: absolute;
+  left: var(--bird-x);
+  top: var(--bird-y);
+  z-index: 4;
+  width: clamp(22px, 2.3vw, 34px);
+  height: clamp(22px, 2.3vw, 34px);
+  border: 0;
+  padding: 0;
+  background: transparent;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(var(--bird-scale, 1));
+  transform-origin: center bottom;
+  pointer-events: auto;
+  animation: birdArrive 1800ms ease forwards, birdPerchFloat 3.8s 1800ms ease-in-out infinite;
+  cursor: default;
+}
+
+.forest-bird img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: auto;
+  filter: drop-shadow(0 4px 5px rgba(7, 15, 11, 0.22));
+  user-select: none;
+  pointer-events: none;
+}
+
+.forest-bird.is-flying {
+  pointer-events: none;
+  animation: birdFlyAway 2700ms steps(12, end) forwards;
+}
+
+.bottle-mail {
+  position: absolute;
+  left: var(--bottle-x);
+  top: var(--bottle-y);
+  z-index: 4;
+  width: clamp(28px, 2.8vw, 42px);
+  height: clamp(14px, 1.4vw, 22px);
+  border: 0;
+  border-radius: 999px 30% 30% 999px;
+  padding: 0;
+  background:
+    linear-gradient(90deg, rgba(210, 246, 234, 0.74), rgba(245, 255, 241, 0.48) 58%, rgba(100, 154, 128, 0.32)),
+    radial-gradient(circle at 30% 46%, rgba(255, 243, 189, 0.72), transparent 28%);
+  box-shadow: 0 0 9px rgba(211, 255, 232, 0.2);
+  opacity: 0;
+  pointer-events: auto;
+  cursor: pointer;
+  transform: translate(-50%, -50%) rotate(var(--bottle-tilt));
+  animation: bottleDrift var(--bottle-duration) linear forwards;
+}
+
+.bottle-mail::before,
+.bottle-mail::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.bottle-mail::before {
+  right: -18%;
+  top: 24%;
+  width: 25%;
+  height: 52%;
+  border-radius: 0 999px 999px 0;
+  background: rgba(226, 244, 226, 0.56);
+}
+
+.bottle-mail::after {
+  left: 21%;
+  top: 30%;
+  width: 34%;
+  height: 44%;
+  border-radius: 2px;
+  background: rgba(160, 104, 63, 0.44);
+  rotate: -5deg;
+}
+
+.bottle-mail:focus-visible {
+  outline: 1px solid rgba(255, 246, 219, 0.54);
+  outline-offset: 5px;
+}
+
+.forest-letter {
+  position: absolute;
+  left: clamp(18px, 14vw, 172px);
+  bottom: clamp(60px, 11vh, 112px);
+  z-index: 7;
+  max-width: min(330px, calc(100vw - 36px));
+  margin: 0;
+  padding: 18px 20px;
+  border-radius: 5px;
+  background:
+    linear-gradient(135deg, rgba(255, 244, 205, 0.94), rgba(232, 203, 151, 0.9)),
+    radial-gradient(circle at 15% 10%, rgba(123, 83, 45, 0.18), transparent 20%);
+  box-shadow: 0 14px 32px rgba(8, 14, 10, 0.28);
+  color: #5a442b;
+  font-size: clamp(0.82rem, 2.2vw, 0.96rem);
+  line-height: 1.9;
+  white-space: pre-line;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px) rotate(-0.8deg);
+  transition: opacity 900ms ease, transform 900ms ease;
+}
+
+.forest-letter.is-visible {
+  opacity: 0.92;
+  transform: translateY(0) rotate(-0.8deg);
 }
 
 .forest-effect {
@@ -115,13 +387,6 @@ a {
     radial-gradient(circle at 41% 63%, rgba(139, 213, 188, 0.13), transparent 30%);
   mix-blend-mode: screen;
   opacity: 0.62;
-}
-
-.forest-effect--mist {
-  background:
-    linear-gradient(100deg, transparent 0%, rgba(235, 255, 236, 0.1) 36%, transparent 70%),
-    linear-gradient(180deg, rgba(255, 250, 231, 0.12), transparent 34%, rgba(9, 20, 15, 0.18));
-  opacity: 0.44;
 }
 
 .forest-vignette {
@@ -309,45 +574,6 @@ body.intro-finished .forest-portal--fortune {
   top: 84%;
 }
 
-.ambient-mist,
-.leaf-drift {
-  position: absolute;
-  z-index: 1;
-  display: block;
-  pointer-events: none;
-  user-select: none;
-}
-
-.ambient-mist--falls {
-  left: var(--falls-mist-left);
-  top: var(--falls-mist-top);
-  width: var(--falls-mist-width);
-  opacity: 0.12;
-  mix-blend-mode: screen;
-  mask-image: radial-gradient(ellipse at 54% 48%, #000 0 38%, transparent 72%);
-  -webkit-mask-image: radial-gradient(ellipse at 54% 48%, #000 0 38%, transparent 72%);
-  animation: mistFloat 26s ease-in-out infinite;
-}
-
-.leaf-drift {
-  width: clamp(22px, 2.4vw, 34px);
-  opacity: 0;
-  filter: drop-shadow(0 2px 5px rgba(7, 19, 12, 0.2));
-  animation: leafDrift 24s linear infinite;
-}
-
-.leaf-drift--one {
-  left: 18%;
-  top: 23%;
-}
-
-.leaf-drift--two {
-  left: 78%;
-  top: 36%;
-  animation-delay: 11s;
-  animation-duration: 29s;
-}
-
 .hidden-drop {
   position: absolute;
   z-index: 3;
@@ -410,7 +636,6 @@ body.intro-finished .hidden-drop {
 }
 
 .tap-ripple,
-.drag-spark,
 .memory-event-effect {
   position: absolute;
   left: var(--effect-x);
@@ -430,16 +655,6 @@ body.intro-finished .hidden-drop {
   background-image: url("./assets/images/effects/events/ripple-expand.webp");
   opacity: 0;
   animation: tapRipple 820ms ease-out forwards;
-}
-
-.drag-spark {
-  width: 22px;
-  height: 22px;
-  margin-left: -11px;
-  margin-top: -11px;
-  background-image: url("./assets/images/effects/ambient/spark.webp");
-  opacity: 0;
-  animation: dragSpark 620ms ease-out forwards;
 }
 
 .memory-event-effect {
@@ -553,6 +768,28 @@ body.intro-finished .mint-guide.is-active {
   transform: translate(-50%, 0);
 }
 
+.forest-narration {
+  position: absolute;
+  right: clamp(18px, 8vw, 94px);
+  bottom: clamp(72px, 15vh, 138px);
+  z-index: 6;
+  max-width: min(300px, calc(100vw - 36px));
+  margin: 0;
+  color: rgba(255, 248, 222, 0.84);
+  font-size: clamp(0.82rem, 2.3vw, 1rem);
+  line-height: 1.9;
+  text-shadow: 0 2px 12px rgba(6, 13, 10, 0.68);
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  transition: opacity 1400ms ease, transform 1400ms ease;
+}
+
+.forest-narration.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 @keyframes mapContentIntro {
   0% {
     transform: translate3d(calc(-50% + var(--camera-start-x)), calc(-50% + var(--camera-start-y)), 0) scale(var(--camera-start-scale));
@@ -596,53 +833,6 @@ body.intro-finished .mint-guide.is-active {
   100% {
     opacity: 0;
     scale: 1.4;
-  }
-}
-
-@keyframes dragSpark {
-  0% {
-    opacity: 0.58;
-    scale: 0.42;
-  }
-
-  100% {
-    opacity: 0;
-    scale: 1.05;
-  }
-}
-
-@keyframes mistFloat {
-  0%,
-  100% {
-    translate: -3% 1%;
-    opacity: 0.16;
-  }
-
-  50% {
-    translate: 5% -3%;
-    opacity: 0.3;
-  }
-}
-
-@keyframes leafDrift {
-  0% {
-    opacity: 0;
-    translate: 0 0;
-    rotate: -8deg;
-  }
-
-  16% {
-    opacity: 0.3;
-  }
-
-  58% {
-    opacity: 0.22;
-  }
-
-  100% {
-    opacity: 0;
-    translate: 24vw 16vh;
-    rotate: 18deg;
   }
 }
 
@@ -739,6 +929,183 @@ body.intro-finished .mint-guide.is-active {
   }
 }
 
+@keyframes forestMistDrift {
+  0% {
+    transform: translate3d(-2%, 1%, 0) scale(1);
+  }
+
+  100% {
+    transform: translate3d(2%, -1%, 0) scale(1.04);
+  }
+}
+
+@keyframes starBreath {
+  0%,
+  100% {
+    filter: brightness(0.86);
+  }
+
+  50% {
+    filter: brightness(1.12);
+  }
+}
+
+@keyframes shootingStar {
+  0%,
+  72%,
+  100% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scaleX(0.35);
+  }
+
+  75% {
+    opacity: 0.64;
+  }
+
+  79% {
+    opacity: 0;
+    transform: translate3d(-26vw, 8vh, 0) scaleX(1);
+  }
+}
+
+@keyframes lampFlicker {
+  0%,
+  100% {
+    filter: blur(2px) brightness(0.92);
+  }
+
+  45% {
+    filter: blur(2.4px) brightness(1.1);
+  }
+
+  68% {
+    filter: blur(2px) brightness(0.98);
+  }
+}
+
+@keyframes ambientFade {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 6px, 0) scale(0.82);
+  }
+
+  22% {
+    opacity: var(--ambient-opacity);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--ambient-drift-x), var(--ambient-drift-y), 0) scale(1.08);
+  }
+}
+
+@keyframes leafWander {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -4px, 0) rotate(0deg);
+  }
+
+  18% {
+    opacity: var(--ambient-opacity);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--ambient-drift-x), var(--ambient-drift-y), 0) rotate(48deg);
+  }
+}
+
+@keyframes waterShimmer {
+  0% {
+    opacity: 0;
+    transform: scaleX(0.5);
+  }
+
+  28% {
+    opacity: var(--ambient-opacity);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--ambient-drift-x), 0, 0) scaleX(1.45);
+  }
+}
+
+@keyframes lakeRipple {
+  0% {
+    opacity: 0;
+    transform: scale(0.34);
+  }
+
+  25% {
+    opacity: var(--ambient-opacity);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
+
+@keyframes birdArrive {
+  0% {
+    opacity: 0;
+    translate: 0 5px;
+  }
+
+  100% {
+    opacity: 0.88;
+    translate: 0 0;
+  }
+}
+
+@keyframes birdPerchFloat {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+
+  50% {
+    translate: 0 -3px;
+  }
+}
+
+@keyframes birdFlyAway {
+  0% {
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(var(--bird-scale, 1));
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--bird-fly-x)), calc(-50% + var(--bird-fly-y))) scale(0.84);
+  }
+}
+
+@keyframes bottleDrift {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--bottle-tilt));
+  }
+
+  12% {
+    opacity: 0.66;
+  }
+
+  54% {
+    transform: translate(calc(-50% + var(--bottle-mid-x)), calc(-50% + var(--bottle-mid-y))) rotate(var(--bottle-mid-tilt));
+  }
+
+  90% {
+    opacity: 0.56;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--bottle-end-x)), calc(-50% + var(--bottle-end-y))) rotate(var(--bottle-tilt));
+  }
+}
+
 @media (min-width: 760px) {
   :root {
     --camera-start-scale: 0.7;
@@ -781,8 +1148,22 @@ body.intro-finished .mint-guide.is-active {
     height: 108vh;
   }
 
-  .leaf-drift--two {
-    display: none;
+  .forest-portal--fortune {
+    left: 55.5%;
+    top: 27%;
+  }
+
+  .forest-narration {
+    left: 20px;
+    right: auto;
+    bottom: clamp(86px, 18vh, 150px);
+    max-width: min(280px, calc(100vw - 40px));
+  }
+
+  .forest-letter {
+    left: 20px;
+    bottom: clamp(74px, 14vh, 118px);
+    max-width: min(300px, calc(100vw - 40px));
   }
 }
 
@@ -848,8 +1229,12 @@ body.intro-finished .mint-guide.is-active {
 
   .hidden-drop,
   .mint-guide__image,
-  .ambient-mist,
-  .leaf-drift {
+  .time-atmosphere__mist,
+  .time-atmosphere__stars,
+  .time-atmosphere__lamps,
+  .ambient-particle,
+  .forest-bird,
+  .bottle-mail {
     animation-duration: 4s;
   }
 

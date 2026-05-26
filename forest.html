@@ -14,6 +14,10 @@
           <source src="./assets/images/forest.webm" type="video/webm">
         </video>
 
+        <div class="map-atmosphere" aria-hidden="true"></div>
+        <div class="forest-creatures" aria-hidden="true"></div>
+        <div class="forest-drift" aria-hidden="true"></div>
+
         <a class="forest-portal forest-portal--game" href="index.html" aria-label="雫ゲームへ">
           <img src="./assets/images/ui/Forest_Dew_Game_J.webp" alt="">
         </a>
@@ -47,17 +51,18 @@
           <img src="./assets/images/ui/toiawase.webp" alt="">
         </button>
 
-        <img class="ambient-mist ambient-mist--falls" src="./assets/images/effects/ambient/mist.webp" alt="" aria-hidden="true">
-        <img class="leaf-drift leaf-drift--one" src="./assets/images/effects/ambient/leaf-particle.webp" alt="" aria-hidden="true">
-        <img class="leaf-drift leaf-drift--two" src="./assets/images/effects/ambient/leaf-particle.webp" alt="" aria-hidden="true">
-
         <button class="hidden-drop hidden-drop--one" type="button" aria-label="光る雫を調べる"></button>
         <button class="hidden-drop hidden-drop--two" type="button" aria-label="光る雫を調べる"></button>
         <button class="hidden-drop hidden-drop--three" type="button" aria-label="光る雫を調べる"></button>
       </div>
 
+      <div class="time-atmosphere" aria-hidden="true">
+        <div class="time-atmosphere__mist"></div>
+        <div class="time-atmosphere__stars"></div>
+        <div class="time-atmosphere__lamps"></div>
+        <div class="time-atmosphere__tone"></div>
+      </div>
       <div class="forest-effect forest-effect--light" aria-hidden="true"></div>
-      <div class="forest-effect forest-effect--mist" aria-hidden="true"></div>
       <div class="forest-vignette" aria-hidden="true"></div>
     </div>
 
@@ -73,6 +78,7 @@
     </section>
 
     <p class="forest-toast" role="status" aria-live="polite"></p>
+    <p class="forest-narration" role="status" aria-live="polite"></p>
   </main>
 
   <script src="forest.js"></script>

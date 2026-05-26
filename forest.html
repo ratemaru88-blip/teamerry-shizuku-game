@@ -72,6 +72,13 @@
       <img class="mint-guide__image mint-guide__image--normal" src="./assets/images/effects/mint-guide.webp" alt="">
       <img class="mint-guide__image mint-guide__image--blink" src="./assets/images/effects/mint-guide-blink.webp" alt="">
     </div>
+    <div class="mobile-walker" aria-hidden="true">
+      <div class="mobile-walker__bubble"></div>
+      <div class="mobile-walker__sweat"></div>
+      <div class="mobile-walker__bento"></div>
+      <div class="mobile-walker__sleep-mark">Zzz</div>
+      <img class="mobile-walker__image" src="./assets/images/kakao_tobidasu_1.webp" alt="">
+    </div>
 
     <section class="forest-title" aria-label="TeaMerry Forest">
       <p>Tiny World in a Teacup</p>
@@ -93,12 +100,24 @@
         <button type="button" data-debug-toggle="rain" aria-pressed="false">雨OFF</button>
         <button type="button" data-debug-toggle="mist" aria-pressed="false">霧OFF</button>
         <button type="button" data-debug-toggle="stars" aria-pressed="false">星空OFF</button>
+        <button type="button" data-debug-toggle="walker" aria-pressed="true">Walker ON</button>
         <button type="button" data-debug-action="bird">鳥出現テスト</button>
         <button type="button" data-debug-action="se">SE再生テスト</button>
+        <button type="button" data-debug-action="fast-scroll">高速反応テスト</button>
+        <button type="button" data-debug-action="angry">怒り反応テスト</button>
+        <button type="button" data-debug-action="side-move">左右移動テスト</button>
+        <button type="button" data-debug-action="kakao-run">Kakao run test</button>
+        <button type="button" data-debug-action="kakao-lunch">Kakao lunch test</button>
+        <button type="button" data-debug-action="kakao-sleep">Kakao sleep test</button>
+        <button type="button" data-debug-action="wake-up">Wake up test</button>
       </div>
       <label class="debug-panel__fast">
         <input type="checkbox" data-debug-fast>
         <span>高速モード</span>
+      </label>
+      <label class="debug-panel__fast">
+        <input type="checkbox" data-debug-idle-fast>
+        <span>Idle timer fast mode</span>
       </label>
     </aside>
   </main>

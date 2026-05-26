@@ -74,6 +74,7 @@ Local changes already prepared:
 - `forest.html`: Added the Debug Panel markup and rain layer.
 - `forest.css`: Added Debug Panel styling, mobile-safe layout, rain effect, and fixed-ratio forest map sizing.
 - `forest.js`: Added debug controls, forced time modes, rain/mist/star toggles, bird and SE tests, and fast event timing.
+- Mobile walker: Added mobile-only vertical scroll following, UI side reactions, fast scroll reactions, angry reactions, Kakao placeholder running, lunch, sleep, and wake-up states.
 - `.nojekyll`: Added for GitHub Pages static hosting.
 - `README.md`: Added mobile debug and deploy instructions.
 
@@ -106,3 +107,62 @@ https://ratemaru88-blip.github.io/teamerry-shizuku-game/forest.html?debug=1
 ```
 
 3. Use `?debug=0` when checking the production-style view without the Debug Panel.
+
+## Mobile Walker Rest Animation Notes
+
+The mobile Forest page uses a mobile-only scroll-following character.
+
+Current placeholder assets:
+
+- `assets/images/kakao_tobidasu_1.webp`: temporary Kakao display image for run/rest/lunch/sleep states.
+- CSS-generated bento box and sleep mark are used until the final animation files are provided.
+
+Requested final assets to add later:
+
+- Kakao running animation, preferably WebP/APNG/sprite sheet.
+- Kakao lunch animation, converted from the Flash source if needed.
+- Kakao sleeping animation, converted from the Flash source if needed.
+- Optional Kakao wake-up animation.
+
+Recommended asset location:
+
+```text
+assets/images/mobile-walker/kakao-run.webp
+assets/images/mobile-walker/kakao-lunch.webp
+assets/images/mobile-walker/kakao-sleep.webp
+assets/images/mobile-walker/kakao-wake.webp
+```
+
+If the original files are Flash, export them to lightweight web formats first:
+
+- WebP animation for simple drop-in replacement.
+- PNG sprite sheet plus CSS steps animation if file size needs tighter control.
+
+Mobile idle timing:
+
+- 5 seconds after scrolling stops: sit / show bento.
+- 10 seconds after scrolling stops: lunch.
+- 18 seconds after scrolling stops: sleep.
+- On new scroll: wake up and chase.
+
+Debug Panel additions:
+
+- `Kakao run test`
+- `Kakao lunch test`
+- `Kakao sleep test`
+- `Wake up test`
+- `Idle timer fast mode`
+
+`Idle timer fast mode` shortens the idle sequence for checking:
+
+- Rest: about 1.2 seconds
+- Lunch: about 2.4 seconds
+- Sleep: about 4.2 seconds
+
+Local mobile check:
+
+```text
+file:///C:/Users/kakao/Desktop/shizuku-game/forest.html?debug=1
+```
+
+Turn the mobile walker off temporarily with `Walker OFF` in the Debug Panel.

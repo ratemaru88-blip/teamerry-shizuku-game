@@ -10,6 +10,8 @@
   const creatures = document.querySelector(".forest-creatures");
   const driftLayer = document.querySelector(".forest-drift");
   const debugPanel = document.querySelector(".debug-panel");
+  const mobileWalker = document.querySelector(".mobile-walker");
+  const mobileWalkerBubble = document.querySelector(".mobile-walker__bubble");
 
   if (!scene || !map) {
     return;
@@ -30,6 +32,7 @@
 
   const isCoarsePointer = window.matchMedia("(hover: none), (pointer: coarse)").matches;
   const isFinePointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  const mobileWalkerQuery = window.matchMedia("(max-width: 759px)");
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const randomBetween = (min, max) => min + Math.random() * (max - min);
   const pick = (items) => items[Math.floor(Math.random() * items.length)];
@@ -127,14 +130,34 @@
       rain: false,
       mist: false,
       stars: false,
+      walker: true,
     },
     fastMode: false,
+    idleFastMode: false,
     timers: {
       ambient: 0,
       bird: 0,
       bottle: 0,
       narration: 0,
     },
+  };
+
+  const walkerState = {
+    enabled: false,
+    x: 0,
+    y: window.innerHeight * 0.5,
+    targetX: 0,
+    targetY: window.innerHeight * 0.5,
+    lastScrollY: window.scrollY || 0,
+    lastTime: performance.now(),
+    lastDirection: 0,
+    directionChanges: [],
+    stopTimer: 0,
+    speechTimer: 0,
+    centerTimer: 0,
+    restTimers: [],
+    restStage: "",
+    raf: 0,
   };
 
   const parseLength = (value, axis) => {
@@ -318,6 +341,280 @@
     showNarration.timer = window.setTimeout(() => {
       narration.classList.remove("is-visible");
     }, 5200);
+  };
+
+  const walkerLines = {
+    fast: [
+      "ま、待って〜！",
+      "速いよ〜！",
+      "ふぅ追いついた",
+      "急に走らないで〜！",
+    ],
+    angry: [
+      "もう！どっちなの〜！",
+      "上？下？はっきりして〜！",
+      "目が回る〜！",
+      "森で暴走禁止〜！",
+    ],
+    side: [
+      "見に行くね",
+      "こっちかな？",
+      "確認中〜",
+    ],
+    rest: [
+      "ちょっと休憩〜",
+    ],
+    lunch: [
+      "おべんとうタイム！",
+    ],
+    sleep: [
+      "むにゃ",
+    ],
+    wake: [
+      "えっ、もう行くの！？",
+      "置いてかないで〜！",
+    ],
+  };
+
+  const isMobileWalkerActive = () => Boolean(mobileWalker && mobileWalkerQuery.matches && debugState.toggles.walker);
+
+  const setWalkerSpeech = (message) => {
+    if (!mobileWalker || !mobileWalkerBubble) {
+      return;
+    }
+
+    mobileWalkerBubble.textContent = message;
+    mobileWalker.classList.add("has-speech");
+    window.clearTimeout(walkerState.speechTimer);
+    walkerState.speechTimer = window.setTimeout(() => {
+      mobileWalker.classList.remove("has-speech");
+    }, reduceMotion ? 1400 : 2300);
+  };
+
+  const setWalkerClass = (name, active) => {
+    if (mobileWalker) {
+      mobileWalker.classList.toggle(name, active);
+    }
+  };
+
+  const clearWalkerRestTimers = () => {
+    walkerState.restTimers.forEach((timer) => window.clearTimeout(timer));
+    walkerState.restTimers = [];
+  };
+
+  const clearWalkerRestState = () => {
+    ["is-resting", "is-lunching", "is-sleeping", "is-waking"].forEach((name) => setWalkerClass(name, false));
+    walkerState.restStage = "";
+  };
+
+  const setWalkerRestStage = (stage) => {
+    if (!walkerState.enabled || !mobileWalker) {
+      return;
+    }
+
+    clearWalkerRestState();
+    walkerState.restStage = stage;
+    setWalkerClass("is-walking", false);
+    setWalkerClass("is-running", false);
+
+    if (stage === "rest") {
+      setWalkerClass("is-resting", true);
+      setWalkerSpeech(pick(walkerLines.rest));
+    } else if (stage === "lunch") {
+      setWalkerClass("is-lunching", true);
+      setWalkerSpeech(pick(walkerLines.lunch));
+    } else if (stage === "sleep") {
+      setWalkerClass("is-sleeping", true);
+      setWalkerSpeech(pick(walkerLines.sleep));
+    }
+  };
+
+  const getIdleDelays = () => {
+    return debugState.idleFastMode
+      ? { rest: 1200, lunch: 2400, sleep: 4200 }
+      : { rest: 5000, lunch: 10000, sleep: 18000 };
+  };
+
+  const scheduleWalkerIdleRest = () => {
+    if (!walkerState.enabled) {
+      return;
+    }
+
+    clearWalkerRestTimers();
+    const delays = getIdleDelays();
+    walkerState.restTimers = [
+      window.setTimeout(() => setWalkerRestStage("rest"), delays.rest),
+      window.setTimeout(() => setWalkerRestStage("lunch"), delays.lunch),
+      window.setTimeout(() => setWalkerRestStage("sleep"), delays.sleep),
+    ];
+  };
+
+  const wakeWalkerForScroll = () => {
+    if (!walkerState.enabled || !walkerState.restStage) {
+      return;
+    }
+
+    const wasSleeping = walkerState.restStage === "sleep";
+    clearWalkerRestTimers();
+    clearWalkerRestState();
+    setWalkerClass("is-waking", true);
+    setWalkerSpeech(pick(walkerLines.wake));
+    window.setTimeout(() => setWalkerClass("is-waking", false), reduceMotion ? 350 : 1300);
+
+    if (wasSleeping) {
+      setWalkerClass("is-running", true);
+    }
+  };
+
+  const syncWalkerEnabled = () => {
+    const active = isMobileWalkerActive();
+    walkerState.enabled = active;
+    document.body.classList.toggle("mobile-walker-enabled", active);
+    document.body.classList.toggle("mobile-walker-disabled", mobileWalkerQuery.matches && !debugState.toggles.walker);
+
+    if (!active) {
+      clearWalkerRestTimers();
+      clearWalkerRestState();
+    }
+
+    if (active && !walkerState.raf) {
+      walkerState.targetY = window.innerHeight * 0.5;
+      walkerState.y = walkerState.targetY;
+      walkerState.lastScrollY = window.scrollY || 0;
+      walkerState.lastTime = performance.now();
+      walkerState.raf = window.requestAnimationFrame(updateWalkerFrame);
+      scheduleWalkerIdleRest();
+    }
+  };
+
+  const updateWalkerTargetFromScroll = (speed = 0) => {
+    if (!walkerState.enabled) {
+      return;
+    }
+
+    const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+    const progress = Math.min(1, Math.max(0, window.scrollY / maxScroll));
+    const range = reduceMotion ? 28 : 86;
+    walkerState.targetY = window.innerHeight * 0.43 + progress * range;
+
+    if (speed > 1.65 && !reduceMotion) {
+      setWalkerClass("is-running", true);
+      setWalkerClass("is-walking", false);
+    } else {
+      setWalkerClass("is-running", false);
+      setWalkerClass("is-walking", true);
+    }
+  };
+
+  function updateWalkerFrame() {
+    if (!walkerState.enabled || !mobileWalker) {
+      walkerState.raf = 0;
+      return;
+    }
+
+    const follow = reduceMotion ? 0.32 : mobileWalker.classList.contains("is-running") ? 0.2 : 0.11;
+    walkerState.x += (walkerState.targetX - walkerState.x) * follow;
+    walkerState.y += (walkerState.targetY - walkerState.y) * follow;
+    mobileWalker.style.setProperty("--walker-x", `${walkerState.x.toFixed(1)}px`);
+    mobileWalker.style.setProperty("--walker-y", `${walkerState.y.toFixed(1)}px`);
+    walkerState.raf = window.requestAnimationFrame(updateWalkerFrame);
+  }
+
+  const finishWalkerScroll = () => {
+    if (!walkerState.enabled || !mobileWalker) {
+      return;
+    }
+
+    setWalkerClass("is-running", false);
+    setWalkerClass("is-walking", false);
+    setWalkerClass("is-sweating", true);
+    setWalkerSpeech(pick(walkerLines.fast));
+    window.setTimeout(() => setWalkerClass("is-sweating", false), 1900);
+    scheduleWalkerIdleRest();
+  };
+
+  const triggerWalkerAngry = () => {
+    if (!walkerState.enabled || !mobileWalker) {
+      return;
+    }
+
+    setWalkerClass("is-angry", true);
+    setWalkerClass("is-running", false);
+    setWalkerSpeech(pick(walkerLines.angry));
+    window.setTimeout(() => setWalkerClass("is-angry", false), 1800);
+  };
+
+  const triggerWalkerFast = () => {
+    if (!walkerState.enabled) {
+      return;
+    }
+
+    setWalkerClass("is-running", true);
+    clearWalkerRestTimers();
+    clearWalkerRestState();
+    setWalkerSpeech(pick(walkerLines.fast));
+    window.clearTimeout(walkerState.stopTimer);
+    walkerState.stopTimer = window.setTimeout(finishWalkerScroll, reduceMotion ? 500 : 1200);
+  };
+
+  const moveWalkerToSide = (side) => {
+    if (!walkerState.enabled) {
+      return;
+    }
+
+    const distance = reduceMotion ? 18 : 42;
+    walkerState.targetX = side === "left" ? -distance : distance;
+    setWalkerClass("is-walking", true);
+    clearWalkerRestTimers();
+    clearWalkerRestState();
+    setWalkerSpeech(pick(walkerLines.side));
+    window.clearTimeout(walkerState.centerTimer);
+    walkerState.centerTimer = window.setTimeout(() => {
+      walkerState.targetX = 0;
+      setWalkerClass("is-walking", false);
+    }, reduceMotion ? 500 : 1300);
+  };
+
+  const handleWalkerScroll = () => {
+    if (!walkerState.enabled) {
+      return;
+    }
+
+    const now = performance.now();
+    const currentY = window.scrollY || 0;
+    const delta = currentY - walkerState.lastScrollY;
+    const elapsed = Math.max(16, now - walkerState.lastTime);
+    const speed = Math.abs(delta) / elapsed;
+    const direction = delta === 0 ? 0 : delta > 0 ? 1 : -1;
+
+    if (Math.abs(delta) > 1) {
+      wakeWalkerForScroll();
+      clearWalkerRestTimers();
+    }
+
+    updateWalkerTargetFromScroll(speed);
+
+    if (direction && walkerState.lastDirection && direction !== walkerState.lastDirection && speed > 0.7) {
+      walkerState.directionChanges.push(now);
+      walkerState.directionChanges = walkerState.directionChanges.filter((time) => now - time < 2400);
+      if (walkerState.directionChanges.length >= 3) {
+        walkerState.directionChanges = [];
+        triggerWalkerAngry();
+      }
+    }
+
+    if (speed > 1.65) {
+      triggerWalkerFast();
+    }
+
+    if (direction) {
+      walkerState.lastDirection = direction;
+    }
+
+    walkerState.lastScrollY = currentY;
+    walkerState.lastTime = now;
+    window.clearTimeout(walkerState.stopTimer);
+    walkerState.stopTimer = window.setTimeout(finishWalkerScroll, reduceMotion ? 260 : 760);
   };
 
   const addAmbientParticle = () => {
@@ -567,8 +864,14 @@
     debugPanel.querySelectorAll("[data-debug-toggle]").forEach((button) => {
       const name = button.dataset.debugToggle;
       const active = Boolean(debugState.toggles[name]);
+      const label = {
+        rain: "雨",
+        mist: "霧",
+        stars: "星空",
+        walker: "Walker",
+      }[name] || name;
       button.setAttribute("aria-pressed", active ? "true" : "false");
-      button.textContent = `${name === "rain" ? "雨" : name === "mist" ? "霧" : "星空"}${active ? "ON" : "OFF"}`;
+      button.textContent = `${label} ${active ? "ON" : "OFF"}`;
     });
   };
 
@@ -606,6 +909,7 @@
         const name = button.dataset.debugToggle;
         debugState.toggles[name] = !debugState.toggles[name];
         applyTimePreset();
+        syncWalkerEnabled();
         updateDebugButtons();
       });
     });
@@ -616,6 +920,15 @@
         debugState.fastMode = fastInput.checked;
         restartTimedEvents();
         showToast(debugState.fastMode ? "時間差イベントを高速化しました。" : "時間差イベントを通常速度に戻しました。");
+      });
+    }
+
+    const idleFastInput = debugPanel.querySelector("[data-debug-idle-fast]");
+    if (idleFastInput) {
+      idleFastInput.addEventListener("change", () => {
+        debugState.idleFastMode = idleFastInput.checked;
+        scheduleWalkerIdleRest();
+        showToast(debugState.idleFastMode ? "休憩タイマーを短縮しました。" : "休憩タイマーを通常速度に戻しました。");
       });
     }
 
@@ -647,6 +960,65 @@
       });
     }
 
+    const fastScrollButton = debugPanel.querySelector('[data-debug-action="fast-scroll"]');
+    if (fastScrollButton) {
+      fastScrollButton.addEventListener("click", () => {
+        syncWalkerEnabled();
+        triggerWalkerFast();
+      });
+    }
+
+    const angryButton = debugPanel.querySelector('[data-debug-action="angry"]');
+    if (angryButton) {
+      angryButton.addEventListener("click", () => {
+        syncWalkerEnabled();
+        triggerWalkerAngry();
+      });
+    }
+
+    const sideMoveButton = debugPanel.querySelector('[data-debug-action="side-move"]');
+    if (sideMoveButton) {
+      sideMoveButton.addEventListener("click", () => {
+        syncWalkerEnabled();
+        moveWalkerToSide(walkerState.targetX <= 0 ? "right" : "left");
+      });
+    }
+
+    const kakaoRunButton = debugPanel.querySelector('[data-debug-action="kakao-run"]');
+    if (kakaoRunButton) {
+      kakaoRunButton.addEventListener("click", () => {
+        syncWalkerEnabled();
+        triggerWalkerFast();
+      });
+    }
+
+    const kakaoLunchButton = debugPanel.querySelector('[data-debug-action="kakao-lunch"]');
+    if (kakaoLunchButton) {
+      kakaoLunchButton.addEventListener("click", () => {
+        syncWalkerEnabled();
+        setWalkerRestStage("lunch");
+      });
+    }
+
+    const kakaoSleepButton = debugPanel.querySelector('[data-debug-action="kakao-sleep"]');
+    if (kakaoSleepButton) {
+      kakaoSleepButton.addEventListener("click", () => {
+        syncWalkerEnabled();
+        setWalkerRestStage("sleep");
+      });
+    }
+
+    const wakeButton = debugPanel.querySelector('[data-debug-action="wake-up"]');
+    if (wakeButton) {
+      wakeButton.addEventListener("click", () => {
+        syncWalkerEnabled();
+        if (!walkerState.restStage) {
+          setWalkerRestStage("sleep");
+        }
+        wakeWalkerForScroll();
+      });
+    }
+
     updateDebugButtons();
   };
 
@@ -670,6 +1042,10 @@
     ensureAudio();
 
     if (!state.enabled || event.target.closest(".debug-panel") || event.target.closest(".forest-portal") || event.target.closest(".hidden-drop") || event.target.closest(".bottle-mail") || event.target.closest(".forest-bird")) {
+      return;
+    }
+
+    if (isMobileWalkerActive()) {
       return;
     }
 
@@ -733,6 +1109,22 @@
     }
 
     renderMap();
+    syncWalkerEnabled();
+    updateWalkerTargetFromScroll();
+  });
+
+  window.addEventListener("scroll", handleWalkerScroll, { passive: true });
+
+  document.querySelectorAll(".forest-portal").forEach((portal) => {
+    portal.addEventListener("pointerdown", () => {
+      if (!isMobileWalkerActive()) {
+        return;
+      }
+
+      const rect = portal.getBoundingClientRect();
+      const side = rect.left + rect.width / 2 < window.innerWidth / 2 ? "left" : "right";
+      moveWalkerToSide(side);
+    }, { passive: true });
   });
 
   document.querySelectorAll("[data-coming-soon]").forEach((button) => {
@@ -750,6 +1142,17 @@
 
   setupDebugPanel();
   applyTimePreset();
+  syncWalkerEnabled();
+  updateWalkerTargetFromScroll();
+  const handleWalkerMediaChange = () => {
+    syncWalkerEnabled();
+    updateWalkerTargetFromScroll();
+  };
+  if (typeof mobileWalkerQuery.addEventListener === "function") {
+    mobileWalkerQuery.addEventListener("change", handleWalkerMediaChange);
+  } else if (typeof mobileWalkerQuery.addListener === "function") {
+    mobileWalkerQuery.addListener(handleWalkerMediaChange);
+  }
   window.setInterval(applyTimePreset, 60 * 1000);
 
   restartTimedEvents();

@@ -45,9 +45,10 @@
       warmth: "rgba(255, 247, 219, 0.08)",
       coolness: "rgba(229, 242, 255, 0.1)",
       darkness: "rgba(8, 18, 22, 0.02)",
-      mist: 0.34,
+      mist: 0.18,
       stars: 0,
       lamps: 0.04,
+      sunset: 0,
       glow: 0.04,
     },
     day: {
@@ -57,22 +58,24 @@
       warmth: "rgba(255, 242, 205, 0.04)",
       coolness: "rgba(206, 239, 255, 0.05)",
       darkness: "rgba(4, 10, 18, 0)",
-      mist: 0.09,
+      mist: 0.06,
       stars: 0,
       lamps: 0,
+      sunset: 0,
       glow: 0,
     },
     evening: {
-      brightness: 0.88,
-      saturate: 0.94,
-      contrast: 1,
-      warmth: "rgba(255, 142, 92, 0.18)",
-      coolness: "rgba(91, 66, 112, 0.07)",
-      darkness: "rgba(24, 10, 22, 0.1)",
-      mist: 0.16,
-      stars: 0.02,
-      lamps: 0.18,
-      glow: 0.08,
+      brightness: 0.82,
+      saturate: 1.08,
+      contrast: 1.04,
+      warmth: "rgba(255, 116, 76, 0.26)",
+      coolness: "rgba(38, 55, 128, 0.16)",
+      darkness: "rgba(10, 16, 28, 0.18)",
+      mist: 0.12,
+      stars: 0.08,
+      lamps: 0.36,
+      sunset: 0.82,
+      glow: 0.13,
     },
     night: {
       brightness: 0.52,
@@ -81,9 +84,10 @@
       warmth: "rgba(255, 181, 103, 0.05)",
       coolness: "rgba(75, 105, 162, 0.18)",
       darkness: "rgba(3, 8, 19, 0.46)",
-      mist: 0.12,
+      mist: 0.08,
       stars: 0.72,
       lamps: 0.44,
+      sunset: 0,
       glow: 0.18,
     },
   };
@@ -122,6 +126,7 @@
   let currentBird = null;
   let audioReady = false;
   let audioContext = null;
+  let riverStarted = false;
   let activeTimeName = "";
   let soundscape = null;
   const debugState = {
@@ -256,36 +261,67 @@
     scene.style.setProperty("--time-warmth", preset.warmth);
     scene.style.setProperty("--time-coolness", preset.coolness);
     scene.style.setProperty("--time-darkness", preset.darkness);
-    scene.style.setProperty("--mist-opacity", debugState.toggles.mist ? Math.max(preset.mist, 0.42) : preset.mist);
+    scene.style.setProperty("--mist-opacity", debugState.toggles.mist ? Math.max(preset.mist, 0.18) : preset.mist);
     scene.style.setProperty("--star-opacity", debugState.toggles.stars ? Math.max(preset.stars, 0.78) : preset.stars);
     scene.style.setProperty("--lamp-opacity", preset.lamps);
+    scene.style.setProperty("--sunset-opacity", preset.sunset || 0);
     scene.style.setProperty("--rain-opacity", debugState.toggles.rain ? 0.34 : 0);
     scene.style.setProperty("--glow-boost", preset.glow);
     updateSoundscape();
   };
 
+  const createSoundscape = () => {
+    if (soundscape) {
+      return;
+    }
+
+    soundscape = {
+      river: new Audio("./assets/sounds/river_sound1.mp3"),
+      bird: new Audio("./assets/sounds/カッコウの鳴き声.mp3"),
+    };
+    soundscape.river.loop = true;
+    soundscape.river.preload = "auto";
+    soundscape.river.volume = 0.018;
+    soundscape.bird.volume = 0.035;
+  };
+
+  const startRiverSound = () => {
+    createSoundscape();
+
+    if (!soundscape || !soundscape.river) {
+      return;
+    }
+
+    soundscape.river.loop = true;
+    const playPromise = soundscape.river.play();
+    riverStarted = true;
+
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch(() => {
+        riverStarted = false;
+      });
+    }
+  };
+
   const ensureAudio = () => {
+    createSoundscape();
+
     if (audioReady) {
+      startRiverSound();
       return;
     }
 
     const AudioCtor = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtor) {
-      return;
+    if (AudioCtor) {
+      audioContext = new AudioCtor();
+
+      if (audioContext.state === "suspended" && typeof audioContext.resume === "function") {
+        audioContext.resume().catch(() => {});
+      }
     }
 
-    audioContext = new AudioCtor();
-    soundscape = {
-      river: new Audio("./assets/sounds/river_sound1.mp3"),
-      bird: new Audio("./assets/sounds/カッコウの鳴き声.mp3"),
-      leaf: new Audio("./assets/sounds/leaf_soft.mp3"),
-    };
-    soundscape.river.loop = true;
-    soundscape.river.volume = 0.018;
-    soundscape.bird.volume = 0.035;
-    soundscape.leaf.volume = 0.025;
-    soundscape.river.play().catch(() => {});
     audioReady = true;
+    startRiverSound();
     updateSoundscape();
   };
 
@@ -687,7 +723,6 @@
     bird.style.setProperty("--bird-fly-x", `${randomBetween(-140, 160)}px`);
     bird.style.setProperty("--bird-fly-y", `${randomBetween(-130, -72)}px`);
     playSoftTone(520, 0.1, 0.012);
-    playForestSound("leaf");
 
     const frames = ["bird-fly-1.webp", "bird-fly-2.webp", "bird-fly-3.webp"];
     let frame = 0;
@@ -955,8 +990,7 @@
     if (soundButton) {
       soundButton.addEventListener("click", () => {
         ensureAudio();
-        playSoftTone(740, 0.18, 0.018);
-        playForestSound("leaf");
+        playForestSound("river");
       });
     }
 
@@ -1142,6 +1176,7 @@
 
   setupDebugPanel();
   applyTimePreset();
+  startRiverSound();
   syncWalkerEnabled();
   updateWalkerTargetFromScroll();
   const handleWalkerMediaChange = () => {
@@ -1154,6 +1189,16 @@
     mobileWalkerQuery.addListener(handleWalkerMediaChange);
   }
   window.setInterval(applyTimePreset, 60 * 1000);
+
+  ["pointerdown", "keydown", "touchstart"].forEach((eventName) => {
+    window.addEventListener(eventName, ensureAudio, { once: true, passive: true });
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && soundscape && !riverStarted) {
+      startRiverSound();
+    }
+  });
 
   restartTimedEvents();
 

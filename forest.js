@@ -49,6 +49,9 @@
       stars: 0,
       lamps: 0.04,
       sunset: 0,
+      skyClear: 0.24,
+      skyCloud: 0.18,
+      skyHaze: 0.2,
       glow: 0.04,
     },
     day: {
@@ -62,6 +65,9 @@
       stars: 0,
       lamps: 0,
       sunset: 0,
+      skyClear: 0.28,
+      skyCloud: 0.16,
+      skyHaze: 0.12,
       glow: 0,
     },
     evening: {
@@ -75,6 +81,9 @@
       stars: 0.08,
       lamps: 0.36,
       sunset: 0.82,
+      skyClear: 0.08,
+      skyCloud: 0.12,
+      skyHaze: 0.24,
       glow: 0.13,
     },
     night: {
@@ -88,6 +97,9 @@
       stars: 0.72,
       lamps: 0.44,
       sunset: 0,
+      skyClear: 0,
+      skyCloud: 0.04,
+      skyHaze: 0.08,
       glow: 0.18,
     },
   };
@@ -117,6 +129,14 @@
     { x: 36, y: 61, scale: 0.76 },
   ];
 
+  const groundBirdSites = [
+    { x: 278, y: 628, spreadX: 60, spreadY: 20, scale: 0.88 },
+    { x: 734, y: 578, spreadX: 78, spreadY: 24, scale: 0.82 },
+    { x: 928, y: 470, spreadX: 66, spreadY: 20, scale: 0.72 },
+    { x: 1108, y: 744, spreadX: 82, spreadY: 28, scale: 0.94 },
+    { x: 1284, y: 544, spreadX: 70, spreadY: 22, scale: 0.78 },
+  ];
+
   const bottleRoutes = [
     { x: 63, y: 64, midX: "-4vw", midY: "1.4vh", endX: "-17vw", endY: "4vh" },
     { x: 80, y: 60, midX: "-6vw", midY: "-1vh", endX: "-20vw", endY: "2.5vh" },
@@ -124,6 +144,7 @@
   ];
 
   let currentBird = null;
+  const groundBirds = new Set();
   let audioReady = false;
   let audioContext = null;
   let riverStarted = false;
@@ -265,6 +286,9 @@
     scene.style.setProperty("--star-opacity", debugState.toggles.stars ? Math.max(preset.stars, 0.78) : preset.stars);
     scene.style.setProperty("--lamp-opacity", preset.lamps);
     scene.style.setProperty("--sunset-opacity", preset.sunset || 0);
+    scene.style.setProperty("--sky-clear-opacity", preset.skyClear);
+    scene.style.setProperty("--sky-cloud-opacity", preset.skyCloud);
+    scene.style.setProperty("--sky-haze-opacity", preset.skyHaze);
     scene.style.setProperty("--rain-opacity", debugState.toggles.rain ? 0.34 : 0);
     scene.style.setProperty("--glow-boost", preset.glow);
     updateSoundscape();
@@ -781,9 +805,76 @@
     window.setTimeout(() => flyAwayBird(bird), randomBetween(9000, 17000));
   };
 
+  const flyAwayGroundBird = (bird) => {
+    if (!bird || bird.classList.contains("is-flying")) {
+      return;
+    }
+
+    window.clearTimeout(bird.leaveTimer);
+    bird.classList.add("is-flying");
+    bird.style.setProperty("--ground-bird-fly-x", `${randomBetween(-180, 180)}px`);
+    bird.style.setProperty("--ground-bird-fly-y", `${randomBetween(-180, -104)}px`);
+    playSoftTone(560, 0.08, 0.008);
+
+    window.setTimeout(() => {
+      groundBirds.delete(bird);
+      bird.remove();
+    }, 1800);
+  };
+
+  const spawnGroundBirdFlock = () => {
+    if (!creatures || reduceMotion || groundBirds.size >= 6) {
+      return;
+    }
+
+    const site = pick(groundBirdSites);
+    const count = Math.min(6 - groundBirds.size, Math.floor(randomBetween(2, 5)));
+
+    for (let i = 0; i < count; i += 1) {
+      const bird = document.createElement("button");
+      const body = document.createElement("span");
+      const head = document.createElement("span");
+      const crumb = document.createElement("span");
+      const offsetX = randomBetween(-site.spreadX, site.spreadX);
+      const offsetY = randomBetween(-site.spreadY, site.spreadY);
+      const direction = Math.random() < 0.5 ? -1 : 1;
+      const scale = site.scale * randomBetween(0.82, 1.12);
+
+      bird.type = "button";
+      bird.className = "forest-ground-bird";
+      bird.tabIndex = -1;
+      bird.setAttribute("aria-label", "餌をついばむ鳥");
+      bird.style.setProperty("--ground-bird-x", `${site.x + offsetX}px`);
+      bird.style.setProperty("--ground-bird-y", `${site.y + offsetY}px`);
+      bird.style.setProperty("--ground-bird-scale", scale);
+      bird.style.setProperty("--ground-bird-direction", direction);
+      bird.style.setProperty("--ground-bird-delay", `${i * 170 + Math.abs(offsetX) * 2}ms`);
+      bird.style.setProperty("--ground-bird-hop", `${randomBetween(3, 8)}px`);
+
+      body.className = "forest-ground-bird__body";
+      head.className = "forest-ground-bird__head";
+      crumb.className = "forest-ground-bird__crumb";
+      bird.append(body, head, crumb);
+      creatures.append(bird);
+      groundBirds.add(bird);
+
+      bird.addEventListener("pointerenter", () => flyAwayGroundBird(bird));
+      bird.addEventListener("click", (event) => {
+        event.preventDefault();
+        flyAwayGroundBird(bird);
+      });
+
+      bird.leaveTimer = window.setTimeout(() => {
+        flyAwayGroundBird(bird);
+      }, randomBetween(10500, 19000) + i * 280);
+    }
+  };
+
   const scheduleBird = (delay = getDebugDelay(24000, 62000, 3000, 5200)) => {
     setDebugTimer("bird", () => {
-      if (Math.random() < 0.72) {
+      if (Math.random() < 0.62) {
+        spawnGroundBirdFlock();
+      } else if (Math.random() < 0.72) {
         spawnBird();
       }
       scheduleBird();
@@ -983,6 +1074,7 @@
     if (birdButton) {
       birdButton.addEventListener("click", () => {
         spawnBird();
+        spawnGroundBirdFlock();
       });
     }
 
@@ -1107,6 +1199,23 @@
       if (distance < 72) {
         flyAwayBird(currentBird);
       }
+    }
+
+    if (event.pointerType === "mouse" && groundBirds.size) {
+      groundBirds.forEach((bird) => {
+        if (bird.classList.contains("is-flying")) {
+          return;
+        }
+
+        const rect = bird.getBoundingClientRect();
+        const birdX = rect.left + rect.width / 2;
+        const birdY = rect.top + rect.height / 2;
+        const distance = Math.hypot(event.clientX - birdX, event.clientY - birdY);
+
+        if (distance < 82) {
+          flyAwayGroundBird(bird);
+        }
+      });
     }
 
     if (!state.dragging || event.pointerId !== state.pointerId) {

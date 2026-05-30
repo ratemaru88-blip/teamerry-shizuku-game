@@ -29,6 +29,10 @@
   --star-opacity: 0;
   --lamp-opacity: 0;
   --sunset-opacity: 0;
+  --sky-clear-opacity: 0.2;
+  --sky-cloud-opacity: 0.2;
+  --sky-haze-opacity: 0.16;
+  --sky-layer-height: 43%;
   --glow-boost: 0;
 }
 
@@ -119,6 +123,80 @@ a {
   transition: filter 12s ease;
 }
 
+.sky-atmosphere {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 1;
+  width: 100%;
+  height: var(--sky-layer-height);
+  overflow: hidden;
+  pointer-events: none;
+  mask-image: linear-gradient(180deg, #000 0%, #000 66%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 66%, transparent 100%);
+}
+
+.sky-atmosphere span {
+  position: absolute;
+  inset: 0;
+  display: block;
+  pointer-events: none;
+  transition: opacity 12s ease, filter 12s ease;
+}
+
+.sky-atmosphere__clear {
+  background:
+    radial-gradient(ellipse at 52% 8%, rgba(255, 255, 255, 0.18), transparent 34%),
+    linear-gradient(180deg, rgba(69, 169, 235, 0.38) 0%, rgba(121, 204, 247, 0.2) 48%, rgba(181, 230, 255, 0.06) 100%);
+  mix-blend-mode: screen;
+  opacity: var(--sky-clear-opacity);
+}
+
+.sky-atmosphere__sunset {
+  background:
+    radial-gradient(ellipse at 50% 16%, rgba(255, 216, 123, 0.78), transparent 27%),
+    radial-gradient(ellipse at 49% 33%, rgba(255, 91, 91, 0.58), transparent 45%),
+    linear-gradient(180deg, rgba(58, 72, 166, 0.38) 0%, rgba(255, 126, 83, 0.42) 52%, rgba(255, 199, 109, 0.16) 100%);
+  mix-blend-mode: soft-light;
+  opacity: var(--sunset-opacity);
+}
+
+.sky-atmosphere__stars {
+  background:
+    radial-gradient(circle at 14% 20%, rgba(255, 248, 215, 0.9) 0 1px, transparent 1.7px),
+    radial-gradient(circle at 27% 11%, rgba(223, 244, 255, 0.72) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 42% 24%, rgba(255, 248, 215, 0.84) 0 1px, transparent 1.7px),
+    radial-gradient(circle at 61% 13%, rgba(223, 244, 255, 0.76) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 78% 28%, rgba(255, 248, 215, 0.86) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 91% 16%, rgba(223, 244, 255, 0.7) 0 1px, transparent 1.6px);
+  background-size: 100% 100%;
+  mix-blend-mode: screen;
+  opacity: calc(var(--star-opacity) * 0.9);
+  animation: starBreath 7s ease-in-out infinite;
+}
+
+.sky-atmosphere__clouds {
+  background:
+    radial-gradient(ellipse at 12% 39%, rgba(255, 255, 255, 0.22), transparent 21%),
+    radial-gradient(ellipse at 27% 31%, rgba(255, 255, 255, 0.2), transparent 19%),
+    radial-gradient(ellipse at 74% 22%, rgba(255, 255, 255, 0.16), transparent 23%),
+    radial-gradient(ellipse at 88% 37%, rgba(255, 255, 255, 0.18), transparent 20%);
+  filter: blur(12px);
+  mix-blend-mode: screen;
+  opacity: var(--sky-cloud-opacity);
+  transform: translateX(-2%);
+  animation: skyCloudDrift 62s ease-in-out infinite alternate;
+}
+
+.sky-atmosphere__haze {
+  background:
+    linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, 0.16) 58%, rgba(226, 245, 255, 0.08) 100%),
+    radial-gradient(ellipse at 48% 84%, rgba(255, 245, 210, 0.2), transparent 46%);
+  filter: blur(5px);
+  mix-blend-mode: screen;
+  opacity: var(--sky-haze-opacity);
+}
+
 .time-atmosphere {
   position: absolute;
   inset: 0;
@@ -133,11 +211,10 @@ a {
   inset: 0;
   z-index: 1;
   background:
-    radial-gradient(ellipse at 50% 7%, rgba(255, 188, 91, 0.9), transparent 28%),
-    radial-gradient(ellipse at 51% 15%, rgba(255, 96, 91, 0.58), transparent 38%),
-    linear-gradient(180deg, rgba(44, 52, 139, 0.32) 0%, transparent 34%);
+    radial-gradient(ellipse at 50% 8%, rgba(255, 179, 88, 0.46), transparent 24%),
+    linear-gradient(180deg, rgba(255, 109, 86, 0.2) 0%, transparent 38%);
   mix-blend-mode: soft-light;
-  opacity: var(--sunset-opacity);
+  opacity: calc(var(--sunset-opacity) * 0.54);
   transition: opacity 12s ease;
   pointer-events: none;
 }
@@ -430,6 +507,139 @@ a {
 .forest-bird.is-flying {
   pointer-events: none;
   animation: birdFlyAway 2700ms steps(12, end) forwards;
+}
+
+.forest-ground-bird {
+  position: absolute;
+  left: var(--ground-bird-x);
+  top: var(--ground-bird-y);
+  z-index: 4;
+  width: 32px;
+  height: 24px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  opacity: 0;
+  transform: translate(-50%, -50%) scaleX(var(--ground-bird-direction, 1)) scale(var(--ground-bird-scale, 1));
+  transform-origin: center bottom;
+  pointer-events: auto;
+  cursor: default;
+  animation:
+    groundBirdLand 720ms var(--ground-bird-delay, 0ms) cubic-bezier(0.23, 0.82, 0.28, 1.15) forwards,
+    groundBirdHop 3.8s calc(var(--ground-bird-delay, 0ms) + 720ms) ease-in-out infinite;
+}
+
+.forest-ground-bird::before,
+.forest-ground-bird::after {
+  content: "";
+  position: absolute;
+  left: 11px;
+  bottom: 1px;
+  width: 1px;
+  height: 7px;
+  background: rgba(10, 13, 10, 0.76);
+  transform-origin: center top;
+}
+
+.forest-ground-bird::before {
+  rotate: -7deg;
+}
+
+.forest-ground-bird::after {
+  left: 17px;
+  rotate: 9deg;
+}
+
+.forest-ground-bird__body,
+.forest-ground-bird__head,
+.forest-ground-bird__crumb {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+}
+
+.forest-ground-bird__body {
+  left: 6px;
+  bottom: 6px;
+  width: 18px;
+  height: 12px;
+  border-radius: 58% 48% 54% 46%;
+  background: rgba(8, 11, 8, 0.78);
+  box-shadow: 0 4px 7px rgba(6, 12, 8, 0.18);
+}
+
+.forest-ground-bird__body::before {
+  content: "";
+  position: absolute;
+  left: -4px;
+  top: 3px;
+  width: 10px;
+  height: 8px;
+  border-radius: 65% 15% 65% 25%;
+  background: rgba(8, 11, 8, 0.72);
+  rotate: -13deg;
+}
+
+.forest-ground-bird__body::after {
+  content: "";
+  position: absolute;
+  right: 3px;
+  top: 3px;
+  width: 12px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(40, 45, 37, 0.42);
+  transform-origin: 86% 42%;
+  animation: groundBirdWing 2.8s ease-in-out infinite;
+}
+
+.forest-ground-bird__head {
+  right: 3px;
+  bottom: 14px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: rgba(8, 11, 8, 0.78);
+  transform-origin: 20% 82%;
+  animation: groundBirdPeck 1.35s calc(var(--ground-bird-delay, 0ms) + 360ms) ease-in-out infinite;
+}
+
+.forest-ground-bird__head::before {
+  content: "";
+  position: absolute;
+  right: -5px;
+  top: 4px;
+  width: 7px;
+  height: 4px;
+  background: rgba(8, 11, 8, 0.76);
+  clip-path: polygon(0 20%, 100% 50%, 0 80%);
+}
+
+.forest-ground-bird__crumb {
+  right: 0;
+  bottom: 2px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(230, 204, 128, 0.58);
+  box-shadow:
+    -7px 2px 0 rgba(230, 204, 128, 0.4),
+    -13px 0 0 rgba(230, 204, 128, 0.3);
+  opacity: 0.86;
+}
+
+.forest-ground-bird.is-flying {
+  pointer-events: none;
+  animation: groundBirdFlyAway 1800ms cubic-bezier(0.16, 0.84, 0.22, 1) forwards;
+}
+
+.forest-ground-bird.is-flying .forest-ground-bird__head,
+.forest-ground-bird.is-flying .forest-ground-bird__body::after {
+  animation: none;
+}
+
+.forest-ground-bird.is-flying .forest-ground-bird__body::before {
+  animation: groundBirdFlap 190ms ease-in-out infinite alternate;
 }
 
 .bottle-mail {
@@ -1200,6 +1410,16 @@ body.debug-panel-hidden .debug-panel {
   }
 }
 
+@keyframes skyCloudDrift {
+  0% {
+    transform: translate3d(-2%, 0, 0) scale(1);
+  }
+
+  100% {
+    transform: translate3d(2.5%, -2%, 0) scale(1.04);
+  }
+}
+
 @keyframes memoryGlow {
   0%,
   100% {
@@ -1615,6 +1835,93 @@ body.debug-panel-hidden .debug-panel {
   }
 }
 
+@keyframes groundBirdLand {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% - 36px)) scaleX(var(--ground-bird-direction, 1)) scale(calc(var(--ground-bird-scale, 1) * 0.76));
+  }
+
+  68% {
+    opacity: 0.86;
+    transform: translate(-50%, calc(-50% + 2px)) scaleX(var(--ground-bird-direction, 1)) scale(var(--ground-bird-scale, 1));
+  }
+
+  100% {
+    opacity: 0.82;
+    transform: translate(-50%, -50%) scaleX(var(--ground-bird-direction, 1)) scale(var(--ground-bird-scale, 1));
+  }
+}
+
+@keyframes groundBirdHop {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scaleX(var(--ground-bird-direction, 1)) scale(var(--ground-bird-scale, 1));
+  }
+
+  44% {
+    transform: translate(calc(-50% + var(--ground-bird-hop, 5px)), calc(-50% - 3px)) scaleX(var(--ground-bird-direction, 1)) scale(var(--ground-bird-scale, 1));
+  }
+
+  52% {
+    transform: translate(calc(-50% + var(--ground-bird-hop, 5px)), -50%) scaleX(var(--ground-bird-direction, 1)) scale(var(--ground-bird-scale, 1));
+  }
+}
+
+@keyframes groundBirdPeck {
+  0%,
+  42%,
+  100% {
+    transform: rotate(0deg) translateY(0);
+  }
+
+  55% {
+    transform: rotate(34deg) translate(3px, 5px);
+  }
+
+  68% {
+    transform: rotate(18deg) translate(2px, 3px);
+  }
+}
+
+@keyframes groundBirdWing {
+  0%,
+  100% {
+    transform: rotate(0deg) scaleY(1);
+    opacity: 0.58;
+  }
+
+  48% {
+    transform: rotate(-8deg) scaleY(0.92);
+    opacity: 0.38;
+  }
+}
+
+@keyframes groundBirdFlap {
+  0% {
+    transform: translate(-2px, 0) rotate(-28deg) scaleY(0.88);
+  }
+
+  100% {
+    transform: translate(-3px, -4px) rotate(-62deg) scaleY(1.18);
+  }
+}
+
+@keyframes groundBirdFlyAway {
+  0% {
+    opacity: 0.86;
+    transform: translate(-50%, -50%) scaleX(var(--ground-bird-direction, 1)) scale(var(--ground-bird-scale, 1));
+  }
+
+  22% {
+    opacity: 0.9;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--ground-bird-fly-x)), calc(-50% + var(--ground-bird-fly-y))) scaleX(var(--ground-bird-direction, 1)) scale(calc(var(--ground-bird-scale, 1) * 0.72));
+  }
+}
+
 @keyframes bottleDrift {
   0% {
     opacity: 0;
@@ -1757,9 +2064,12 @@ body.debug-panel-hidden .debug-panel {
   .time-atmosphere__rain,
   .time-atmosphere__stars,
   .time-atmosphere__lamps,
+  .sky-atmosphere__stars,
+  .sky-atmosphere__clouds,
   .map-mist,
   .ambient-particle,
   .forest-bird,
+  .forest-ground-bird,
   .bottle-mail {
     animation-duration: 4s;
   }

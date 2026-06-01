@@ -1,5 +1,7 @@
 (() => {
   const scene = document.querySelector(".forest-scene");
+  const viewport = document.querySelector(".forest-stage");
+  const stage = document.getElementById("stage");
   const map = document.querySelector(".map-content");
   const drops = document.querySelectorAll(".hidden-drop");
   const toast = document.querySelector(".forest-toast");
@@ -9,6 +11,9 @@
   const mapAtmosphere = document.querySelector(".map-atmosphere");
   const creatures = document.querySelector(".forest-creatures");
   const driftLayer = document.querySelector(".forest-drift");
+  const milkyWay = document.querySelector(".forest-milkyway");
+  const moon = document.querySelector(".forest-moon");
+  const forestBgVideos = Array.from(document.querySelectorAll("[data-bg-video]"));
   const debugPanel = document.querySelector(".debug-panel");
   const mobileWalker = document.querySelector(".mobile-walker");
   const mobileWalkerBubble = document.querySelector(".mobile-walker__bubble");
@@ -21,7 +26,9 @@
     enabled: false,
     dragging: false,
     pointerId: null,
-    scale: 1,
+    intro: true,
+    minX: 0,
+    minY: 0,
     x: 0,
     y: 0,
     startX: 0,
@@ -36,71 +43,71 @@
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const randomBetween = (min, max) => min + Math.random() * (max - min);
   const pick = (items) => items[Math.floor(Math.random() * items.length)];
-
-  const timePresets = {
-    morning: {
-      brightness: 1.03,
-      saturate: 0.9,
-      contrast: 0.94,
-      warmth: "rgba(255, 247, 219, 0.08)",
-      coolness: "rgba(229, 242, 255, 0.1)",
-      darkness: "rgba(8, 18, 22, 0.02)",
-      mist: 0.18,
-      stars: 0,
-      lamps: 0.04,
-      sunset: 0,
-      skyClear: 0.24,
-      skyCloud: 0.18,
-      skyHaze: 0.2,
-      glow: 0.04,
-    },
+  const backgroundSlots = {
     day: {
-      brightness: 1.08,
-      saturate: 1,
-      contrast: 0.98,
-      warmth: "rgba(255, 242, 205, 0.04)",
-      coolness: "rgba(206, 239, 255, 0.05)",
-      darkness: "rgba(4, 10, 18, 0)",
-      mist: 0.06,
-      stars: 0,
-      lamps: 0,
-      sunset: 0,
-      skyClear: 0.28,
-      skyCloud: 0.16,
-      skyHaze: 0.12,
-      glow: 0,
+      label: "昼",
+      src: "./assets/backgrounds/forest_day_v02.webm",
     },
-    evening: {
-      brightness: 0.82,
-      saturate: 1.08,
-      contrast: 1.04,
-      warmth: "rgba(255, 116, 76, 0.26)",
-      coolness: "rgba(38, 55, 128, 0.16)",
-      darkness: "rgba(10, 16, 28, 0.18)",
-      mist: 0.12,
-      stars: 0.08,
-      lamps: 0.36,
-      sunset: 0.82,
-      skyClear: 0.08,
-      skyCloud: 0.12,
-      skyHaze: 0.24,
-      glow: 0.13,
+    "evening-a": {
+      label: "夕方前",
+      src: "./assets/backgrounds/forest_evening_A_v02.webm",
+    },
+    "evening-b": {
+      label: "夕焼け",
+      src: "./assets/backgrounds/forest_evening_B_v02.webm",
     },
     night: {
-      brightness: 0.52,
-      saturate: 0.72,
-      contrast: 1.06,
-      warmth: "rgba(255, 181, 103, 0.05)",
-      coolness: "rgba(75, 105, 162, 0.18)",
-      darkness: "rgba(3, 8, 19, 0.46)",
-      mist: 0.08,
-      stars: 0.72,
-      lamps: 0.44,
-      sunset: 0,
-      skyClear: 0,
-      skyCloud: 0.04,
-      skyHaze: 0.08,
-      glow: 0.18,
+      label: "夜",
+      src: "./assets/backgrounds/forest_night_v02.webm",
+    },
+  };
+  let visibleBackgroundIndex = 0;
+  const worldSize = {
+    width: 1920,
+    height: 1080,
+  };
+  let stageScale = 1;
+
+  const getViewportSize = () => {
+    const rect = viewport ? viewport.getBoundingClientRect() : { width: window.innerWidth, height: window.innerHeight };
+
+    return {
+      width: rect.width || window.innerWidth,
+      height: rect.height || window.innerHeight,
+    };
+  };
+
+  const getScaledWorldSize = () => ({
+    width: worldSize.width * stageScale,
+    height: worldSize.height * stageScale,
+  });
+
+  const timePresets = {
+    day: { mist: 0.06, glow: 0 },
+    "evening-a": { mist: 0.1, glow: 0.04 },
+    "evening-b": { mist: 0.12, glow: 0.07 },
+    night: { mist: 0.08, glow: 0.1 },
+  };
+  const moonPhases = {
+    crescent: {
+      src: "./assets/images/effects/moon.small.crescent2.png",
+      size: 66,
+      opacity: 0.64,
+    },
+    half: {
+      src: "./assets/images/effects/moon.halt1.png",
+      size: 90,
+      opacity: 0.68,
+    },
+    full: {
+      src: "./assets/images/effects/moon.hull.png",
+      size: 108,
+      opacity: 0.72,
+    },
+    super: {
+      src: "./assets/images/effects/moon.big.full.png",
+      size: 160,
+      opacity: 0.78,
     },
   };
 
@@ -130,11 +137,9 @@
   ];
 
   const groundBirdSites = [
-    { x: 278, y: 628, spreadX: 60, spreadY: 20, scale: 0.88 },
-    { x: 734, y: 578, spreadX: 78, spreadY: 24, scale: 0.82 },
-    { x: 928, y: 470, spreadX: 66, spreadY: 20, scale: 0.72 },
-    { x: 1108, y: 744, spreadX: 82, spreadY: 28, scale: 0.94 },
-    { x: 1284, y: 544, spreadX: 70, spreadY: 22, scale: 0.78 },
+    { area: "path", x: 980, y: 618, spreadX: 54, spreadY: 16, scale: 0.76 },
+    { area: "stairs", x: 1198, y: 646, spreadX: 48, spreadY: 14, scale: 0.82 },
+    { area: "stone-plaza", x: 1586, y: 794, spreadX: 86, spreadY: 28, scale: 0.94 },
   ];
 
   const bottleRoutes = [
@@ -153,9 +158,7 @@
   const debugState = {
     timeOverride: "",
     toggles: {
-      rain: false,
       mist: false,
-      stars: false,
       walker: true,
     },
     fastMode: false,
@@ -165,6 +168,7 @@
       bird: 0,
       bottle: 0,
       narration: 0,
+      onsenNotice: 0,
     },
   };
 
@@ -186,65 +190,154 @@
     raf: 0,
   };
 
-  const parseLength = (value, axis) => {
-    const text = String(value || "0").trim();
-    const number = Number.parseFloat(text);
+  const centerCamera = () => {
+    const size = getViewportSize();
+    const scaledWorld = getScaledWorldSize();
 
-    if (!Number.isFinite(number)) {
-      return 0;
-    }
-
-    if (text.endsWith("vw")) {
-      return window.innerWidth * number / 100;
-    }
-
-    if (text.endsWith("vh")) {
-      return window.innerHeight * number / 100;
-    }
-
-    if (text.endsWith("%")) {
-      const size = axis === "x" ? window.innerWidth : window.innerHeight;
-      return size * number / 100;
-    }
-
-    return number;
+    state.x = (size.width - scaledWorld.width) / 2;
+    state.y = (size.height - scaledWorld.height) / 2;
   };
 
-  const readIntroEnd = () => {
-    const styles = getComputedStyle(document.documentElement);
+  const getCameraForWorldPoint = (worldX, worldY) => {
+    const size = getViewportSize();
 
-    state.scale = Number.parseFloat(styles.getPropertyValue("--camera-end-scale")) || 1;
-    state.x = parseLength(styles.getPropertyValue("--camera-end-x"), "x");
-    state.y = parseLength(styles.getPropertyValue("--camera-end-y"), "y");
+    return {
+      x: size.width / 2 - worldX * stageScale,
+      y: size.height / 2 - worldY * stageScale,
+    };
+  };
+
+  const getPulledBackCamera = () => {
+    const size = getViewportSize();
+    const scaledWorld = getScaledWorldSize();
+
+    return {
+      x: (size.width - scaledWorld.width) / 2,
+      y: -Math.max(0, (scaledWorld.height - size.height) * 0.18),
+    };
   };
 
   const clampState = () => {
-    const baseWidth = map.offsetWidth;
-    const baseHeight = map.offsetHeight;
-    const scaledWidth = baseWidth * state.scale;
-    const scaledHeight = baseHeight * state.scale;
-    const edgeHint = Math.min(96, Math.max(28, window.innerWidth * 0.12));
+    const size = getViewportSize();
+    const scaledWorld = getScaledWorldSize();
+    const minX = Math.min(size.width - scaledWorld.width, 0);
+    const minY = Math.min(size.height - scaledWorld.height, 0);
 
-    const maxX = Math.max(0, (scaledWidth - window.innerWidth) / 2 + edgeHint);
-    const maxY = Math.max(0, (scaledHeight - window.innerHeight) / 2 + edgeHint);
-
-    state.x = Math.min(maxX, Math.max(-maxX, state.x));
-    state.y = Math.min(maxY, Math.max(-maxY, state.y));
+    state.minX = minX;
+    state.minY = minY;
+    state.x = Math.min(0, Math.max(minX, state.x));
+    state.y = Math.min(0, Math.max(minY, state.y));
   };
 
   const renderMap = () => {
     clampState();
-    map.style.setProperty("--map-x", `${state.x}px`);
-    map.style.setProperty("--map-y", `${state.y}px`);
-    map.style.setProperty("--map-scale", state.scale);
+    const cameraX = `${state.x}px`;
+    const cameraY = `${state.y}px`;
+    const size = getViewportSize();
+
+    console.log("viewport", size.width, size.height);
+    console.log("camera", state.x, state.y);
+    console.log("[forest camera]", {
+      stateX: state.x,
+      stateY: state.y,
+      minX: state.minX,
+      minY: state.minY,
+      windowInnerWidth: window.innerWidth,
+      windowInnerHeight: window.innerHeight,
+      cameraX,
+      cameraY,
+    });
+
+    document.documentElement.style.setProperty("--camera-x", cameraX);
+    document.documentElement.style.setProperty("--camera-y", cameraY);
+  };
+
+  const resizeStage = () => {
+    stageScale = Math.max(
+      1,
+      Math.max(window.innerWidth / worldSize.width, window.innerHeight / worldSize.height)
+    );
+
+    document.documentElement.style.setProperty("--stage-scale", stageScale);
+
+    if (stage) {
+      stage.style.transform = `scale(${stageScale})`;
+    }
+
+    if (state.enabled) {
+      clampState();
+      renderMap();
+    }
+  };
+
+  const easeInOutCubic = (value) => (
+    value < 0.5
+      ? 4 * value * value * value
+      : 1 - Math.pow(-2 * value + 2, 3) / 2
+  );
+
+  const animateCameraTo = ({ x, y, duration = 1200, onComplete }) => {
+    const startX = state.x;
+    const startY = state.y;
+    const startTime = performance.now();
+
+    const tick = (now) => {
+      const progress = Math.min(1, (now - startTime) / duration);
+      const eased = easeInOutCubic(progress);
+
+      state.x = startX + (x - startX) * eased;
+      state.y = startY + (y - startY) * eased;
+      renderMap();
+
+      if (progress < 1) {
+        window.requestAnimationFrame(tick);
+        return;
+      }
+
+      if (typeof onComplete === "function") {
+        onComplete();
+      }
+    };
+
+    window.requestAnimationFrame(tick);
   };
 
   const finishIntro = () => {
-    readIntroEnd();
+    centerCamera();
     state.enabled = true;
-    map.style.animation = "none";
+    state.intro = false;
     renderMap();
+    document.body.classList.remove("camera-intro");
     document.body.classList.add("intro-finished");
+  };
+
+  const runCameraIntro = () => {
+    const pulled = getPulledBackCamera();
+    const mid = getCameraForWorldPoint(940, 500);
+
+    document.body.classList.add("camera-intro");
+    state.enabled = false;
+    state.intro = true;
+    state.x = pulled.x;
+    state.y = pulled.y;
+    renderMap();
+
+    window.setTimeout(() => {
+      animateCameraTo({
+        x: mid.x,
+        y: mid.y,
+        duration: reduceMotion ? 1 : 2200,
+        onComplete: () => {
+          const main = getCameraForWorldPoint(960, 540);
+          animateCameraTo({
+            x: main.x,
+            y: main.y,
+            duration: reduceMotion ? 1 : 1700,
+            onComplete: finishIntro,
+          });
+        },
+      });
+    }, reduceMotion ? 0 : 450);
   };
 
   const showToast = (message) => {
@@ -253,44 +346,276 @@
     }
 
     toast.textContent = message;
+    toast.classList.remove("is-actionable");
+    toast.dataset.cameraTarget = "";
     toast.classList.add("is-visible");
 
     window.clearTimeout(showToast.timer);
     showToast.timer = window.setTimeout(() => {
       toast.classList.remove("is-visible");
+      toast.classList.remove("is-actionable");
+      toast.dataset.cameraTarget = "";
     }, 3600);
   };
 
+  const cameraTargets = {
+    onsen: { x: 80, y: 200, message: "温泉の方で何かが始まったようです" },
+    shrine: { x: 735, y: 515, message: "祠のあたりで小さな光が揺れています" },
+    fortune: { x: 528, y: 290, message: "おみくじの看板がきらりと光りました" },
+  };
+
+  const moveCameraToWorldPoint = (worldX, worldY, duration = 1300) => {
+    const next = getCameraForWorldPoint(worldX, worldY);
+    animateCameraTo({ x: next.x, y: next.y, duration });
+  };
+
+  const showCameraNotice = (targetName) => {
+    if (!toast || !cameraTargets[targetName]) {
+      return;
+    }
+
+    const target = cameraTargets[targetName];
+
+    toast.textContent = target.message;
+    toast.dataset.cameraTarget = targetName;
+    toast.classList.add("is-visible", "is-actionable");
+
+    window.clearTimeout(showToast.timer);
+    showToast.timer = window.setTimeout(() => {
+      toast.classList.remove("is-visible", "is-actionable");
+      toast.dataset.cameraTarget = "";
+    }, 6400);
+  };
+
+  const getCurrentBackgroundName = () => {
+    const now = new Date();
+    const minutes = now.getHours() * 60 + now.getMinutes();
+
+    if (minutes >= 6 * 60 && minutes < 16 * 60 + 30) {
+      return "day";
+    }
+
+    if (minutes >= 16 * 60 + 30 && minutes < 17 * 60 + 30) {
+      return "evening-a";
+    }
+
+    if (minutes >= 17 * 60 + 30 && minutes < 18 * 60) {
+      return "evening-b";
+    }
+
+    return "night";
+  };
+
+  const playBackgroundVideo = (video) => {
+    if (!video || reduceMotion) {
+      return;
+    }
+
+    const playPromise = video.play();
+
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch(() => {});
+    }
+  };
+
+  const updateForestBgVideo = (timeName) => {
+    const slot = backgroundSlots[timeName];
+
+    if (!slot || forestBgVideos.length === 0) {
+      return;
+    }
+
+    const visibleVideo = forestBgVideos[visibleBackgroundIndex] || forestBgVideos[0];
+
+    if (visibleVideo && visibleVideo.dataset.currentSrc === slot.src) {
+      playBackgroundVideo(visibleVideo);
+      return;
+    }
+
+    const nextIndex = forestBgVideos.length > 1
+      ? (visibleBackgroundIndex + 1) % forestBgVideos.length
+      : visibleBackgroundIndex;
+    const nextVideo = forestBgVideos[nextIndex];
+
+    if (!nextVideo) {
+      return;
+    }
+
+    if (nextVideo.dataset.currentSrc !== slot.src) {
+      nextVideo.dataset.currentSrc = slot.src;
+      nextVideo.src = slot.src;
+      nextVideo.load();
+    }
+
+    playBackgroundVideo(nextVideo);
+    nextVideo.classList.add("is-visible");
+
+    if (visibleVideo && visibleVideo !== nextVideo) {
+      visibleVideo.classList.remove("is-visible");
+    }
+
+    visibleBackgroundIndex = nextIndex;
+  };
+
+  const getTodayKey = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  };
+
+  const isSuperMoonDay = () => {
+    const today = getTodayKey();
+    const storageKey = `teamerrySuperMoon:${today}`;
+
+    try {
+      const saved = window.localStorage.getItem(storageKey);
+
+      if (saved) {
+        return saved === "1";
+      }
+
+      const active = Math.random() < 0.04;
+      window.localStorage.setItem(storageKey, active ? "1" : "0");
+
+      return active;
+    } catch (error) {
+      return false;
+    }
+  };
+
+  const isMilkyWayNight = () => {
+    const today = getTodayKey();
+    const storageKey = `teamerryMilkyWay:${today}`;
+
+    try {
+      const saved = window.localStorage.getItem(storageKey);
+
+      if (saved) {
+        return saved === "1";
+      }
+
+      const active = Math.random() < 0.28;
+      window.localStorage.setItem(storageKey, active ? "1" : "0");
+
+      return active;
+    } catch (error) {
+      return Math.random() < 0.28;
+    }
+  };
+
+  const getMoonPhaseName = () => {
+    const now = new Date();
+    const minutes = now.getHours() * 60 + now.getMinutes();
+
+    if (minutes >= 19 * 60 + 30 || minutes < 6 * 60) {
+      return "full";
+    }
+
+    if (minutes >= 18 * 60) {
+      return "half";
+    }
+
+    if (minutes >= 17 * 60 + 30) {
+      return "crescent";
+    }
+
+    return "";
+  };
+
+  const updateMilkyWayEffect = (timeName) => {
+    if (!milkyWay) {
+      return;
+    }
+
+    milkyWay.classList.toggle("is-visible", timeName === "night" && isMilkyWayNight());
+  };
+
+  const showSuperMoonNotice = () => {
+    const today = getTodayKey();
+    const storageKey = `teamerrySuperMoonNotice:${today}`;
+
+    try {
+      if (window.localStorage.getItem(storageKey) === "1") {
+        return;
+      }
+
+      window.localStorage.setItem(storageKey, "1");
+    } catch (error) {
+      // The notice can still appear without storage.
+    }
+
+    showToast("今日はスーパームーンです。月がとても大きく見えます。");
+    showNarration("今日はスーパームーンです。森の影まで、少し明るく見えます。");
+  };
+
+  const updateMoonEffect = () => {
+    if (!moon) {
+      return;
+    }
+
+    const phaseName = getMoonPhaseName();
+
+    if (!phaseName) {
+      moon.classList.remove("is-visible", "is-super");
+      return;
+    }
+
+    const superMoon = isSuperMoonDay();
+    const phase = moonPhases[superMoon ? "super" : phaseName];
+
+    if (moon.dataset.currentSrc !== phase.src) {
+      moon.dataset.currentSrc = phase.src;
+      moon.src = phase.src;
+    }
+
+    moon.style.setProperty("--moon-size", `${phase.size}px`);
+    moon.style.setProperty("--moon-opacity", phase.opacity);
+    moon.classList.toggle("is-super", superMoon);
+    moon.classList.add("is-visible");
+
+    if (superMoon) {
+      showSuperMoonNotice();
+    }
+  };
+
+  const showDebugMoon = (phaseName = "full") => {
+    if (!moon || !moonPhases[phaseName]) {
+      return;
+    }
+
+    const phase = moonPhases[phaseName];
+    moon.dataset.currentSrc = phase.src;
+    moon.src = phase.src;
+    moon.style.setProperty("--moon-size", `${phase.size}px`);
+    moon.style.setProperty("--moon-opacity", phase.opacity);
+    moon.classList.toggle("is-super", phaseName === "super");
+    moon.classList.add("is-visible");
+  };
+
+  const showDebugMilkyWay = () => {
+    if (!milkyWay) {
+      return;
+    }
+
+    milkyWay.classList.add("is-visible");
+  };
+
   const applyTimePreset = (forcedName = debugState.timeOverride) => {
-    const hour = new Date().getHours();
-    const automaticName = hour >= 5 && hour < 10
-      ? "morning"
-      : hour >= 10 && hour < 16
-        ? "day"
-        : hour >= 16 && hour < 19
-          ? "evening"
-          : "night";
+    const automaticName = getCurrentBackgroundName();
     const name = timePresets[forcedName] ? forcedName : automaticName;
     const preset = timePresets[name];
     activeTimeName = name;
+    updateForestBgVideo(name);
 
-    scene.classList.remove("forest-time--morning", "forest-time--day", "forest-time--evening", "forest-time--night");
+    scene.classList.remove("forest-time--day", "forest-time--evening-a", "forest-time--evening-b", "forest-time--night");
     scene.classList.add(`forest-time--${name}`);
-    scene.style.setProperty("--time-brightness", preset.brightness);
-    scene.style.setProperty("--time-saturate", preset.saturate);
-    scene.style.setProperty("--time-contrast", preset.contrast);
-    scene.style.setProperty("--time-warmth", preset.warmth);
-    scene.style.setProperty("--time-coolness", preset.coolness);
-    scene.style.setProperty("--time-darkness", preset.darkness);
     scene.style.setProperty("--mist-opacity", debugState.toggles.mist ? Math.max(preset.mist, 0.18) : preset.mist);
-    scene.style.setProperty("--star-opacity", debugState.toggles.stars ? Math.max(preset.stars, 0.78) : preset.stars);
-    scene.style.setProperty("--lamp-opacity", preset.lamps);
-    scene.style.setProperty("--sunset-opacity", preset.sunset || 0);
-    scene.style.setProperty("--sky-clear-opacity", preset.skyClear);
-    scene.style.setProperty("--sky-cloud-opacity", preset.skyCloud);
-    scene.style.setProperty("--sky-haze-opacity", preset.skyHaze);
-    scene.style.setProperty("--rain-opacity", debugState.toggles.rain ? 0.34 : 0);
     scene.style.setProperty("--glow-boost", preset.glow);
+    updateMilkyWayEffect(name);
+    updateMoonEffect();
     updateSoundscape();
   };
 
@@ -720,6 +1045,7 @@
     scheduleNarration(debugState.fastMode ? 3000 : 9000);
     scheduleBird(debugState.fastMode ? 5000 : 14000);
     scheduleBottle(debugState.fastMode ? 5200 : 18000);
+    setDebugTimer("onsenNotice", () => showCameraNotice("onsen"), debugState.fastMode ? 7000 : 18000);
   };
 
   const scheduleAmbient = (delay = getDebugDelay(2400, 7600, 900, 1800)) => {
@@ -991,9 +1317,7 @@
       const name = button.dataset.debugToggle;
       const active = Boolean(debugState.toggles[name]);
       const label = {
-        rain: "雨",
         mist: "霧",
-        stars: "星空",
         walker: "Walker",
       }[name] || name;
       button.setAttribute("aria-pressed", active ? "true" : "false");
@@ -1078,6 +1402,46 @@
       });
     }
 
+    const moonButton = debugPanel.querySelector('[data-debug-action="moon"]');
+    if (moonButton) {
+      moonButton.addEventListener("click", () => {
+        showDebugMoon("full");
+        showToast("月レイヤーを表示しました。");
+      });
+    }
+
+    const superMoonButton = debugPanel.querySelector('[data-debug-action="super-moon"]');
+    if (superMoonButton) {
+      superMoonButton.addEventListener("click", () => {
+        showDebugMoon("super");
+        showToast("今日はスーパームーンです。月がとても大きく見えます。");
+      });
+    }
+
+    const milkyWayButton = debugPanel.querySelector('[data-debug-action="milkyway"]');
+    if (milkyWayButton) {
+      milkyWayButton.addEventListener("click", () => {
+        showDebugMilkyWay();
+        showToast("天の川レイヤーを表示しました。");
+      });
+    }
+
+    const bottleButton = debugPanel.querySelector('[data-debug-action="bottle"]');
+    if (bottleButton) {
+      bottleButton.addEventListener("click", () => {
+        spawnBottle();
+        showToast("ボトルメールを流しました。");
+      });
+    }
+
+    const memoryEffectButton = debugPanel.querySelector('[data-debug-action="memory-effect"]');
+    if (memoryEffectButton) {
+      memoryEffectButton.addEventListener("click", () => {
+        showMemoryEvent(window.innerWidth / 2, window.innerHeight / 2);
+        showToast("雫エフェクトを表示しました。");
+      });
+    }
+
     const soundButton = debugPanel.querySelector('[data-debug-action="se"]');
     if (soundButton) {
       soundButton.addEventListener("click", () => {
@@ -1148,21 +1512,8 @@
     updateDebugButtons();
   };
 
-  const onCameraIntroEnd = (event) => {
-    if (event.target !== map) {
-      return;
-    }
-
-    map.removeEventListener("animationend", onCameraIntroEnd);
-    finishIntro();
-  };
-
-  map.addEventListener("animationend", onCameraIntroEnd);
-  window.setTimeout(() => {
-    if (!state.enabled) {
-      finishIntro();
-    }
-  }, 4600);
+  resizeStage();
+  runCameraIntro();
 
   scene.addEventListener("pointerdown", (event) => {
     ensureAudio();
@@ -1247,16 +1598,33 @@
   });
 
   window.addEventListener("resize", () => {
+    resizeStage();
+
     if (!state.enabled) {
       return;
     }
 
-    renderMap();
     syncWalkerEnabled();
     updateWalkerTargetFromScroll();
   });
 
+  window.addEventListener("load", resizeStage);
+
   window.addEventListener("scroll", handleWalkerScroll, { passive: true });
+
+  if (toast) {
+    toast.addEventListener("click", () => {
+      const target = cameraTargets[toast.dataset.cameraTarget];
+
+      if (!target || state.intro) {
+        return;
+      }
+
+      toast.classList.remove("is-visible", "is-actionable");
+      toast.dataset.cameraTarget = "";
+      moveCameraToWorldPoint(target.x, target.y);
+    });
+  }
 
   document.querySelectorAll(".forest-portal").forEach((portal) => {
     portal.addEventListener("pointerdown", () => {
@@ -1275,6 +1643,13 @@
       alert("森の奥はまだ準備中のようです");
     });
   });
+
+  const onsenPortal = document.querySelector(".forest-portal--onsen");
+  if (onsenPortal) {
+    onsenPortal.addEventListener("pointerenter", () => {
+      showCameraNotice("onsen");
+    });
+  }
 
   drops.forEach((drop) => {
     drop.addEventListener("click", (event) => {

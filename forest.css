@@ -1,38 +1,17 @@
 :root {
-  --camera-start-scale: 0.54;
-  --camera-end-scale: 1.38;
-  --camera-start-x: 0px;
-  --camera-start-y: 0px;
-  --camera-end-x: -2vw;
-  --camera-end-y: 5vh;
-  --camera-origin-x: 53%;
-  --camera-origin-y: 48%;
-  --camera-duration: 4s;
-  --map-aspect-ratio: 1.5;
-  --map-base-width: 1536px;
-  --map-base-height: 1024px;
-  --map-x: var(--camera-start-x);
-  --map-y: var(--camera-start-y);
-  --map-scale: var(--camera-start-scale);
+  --map-aspect-ratio: 1.7777778;
+  --map-base-width: 1920px;
+  --map-base-height: 1080px;
+  --stage-scale: 1;
+  --camera-x: 0px;
+  --camera-y: 0px;
+  --map-x: var(--camera-x);
+  --map-y: var(--camera-y);
   --tea-brown: #5f4a32;
   --tea-cream: #fff6db;
   --leaf-deep: #13251d;
   --leaf-shadow: #09140f;
-  --time-brightness: 0.9;
-  --time-saturate: 0.95;
-  --time-contrast: 0.97;
-  --time-warmth: rgba(255, 238, 196, 0.03);
-  --time-coolness: rgba(204, 226, 255, 0.04);
-  --time-darkness: rgba(4, 10, 18, 0);
   --mist-opacity: 0.12;
-  --rain-opacity: 0;
-  --star-opacity: 0;
-  --lamp-opacity: 0;
-  --sunset-opacity: 0;
-  --sky-clear-opacity: 0.2;
-  --sky-cloud-opacity: 0.2;
-  --sky-haze-opacity: 0.16;
-  --sky-layer-height: 43%;
   --glow-boost: 0;
 }
 
@@ -44,12 +23,12 @@ html,
 body {
   width: 100%;
   height: 100%;
+  overflow: hidden;
 }
 
 body {
   margin: 0;
-  overflow: hidden;
-  background: var(--leaf-deep);
+  background: #07150f;
   color: var(--tea-cream);
   font-family: "Yu Gothic", "Hiragino Maru Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
   letter-spacing: 0;
@@ -65,8 +44,8 @@ a {
 .forest-scene {
   position: relative;
   width: 100vw;
-  height: 100svh;
-  min-height: 520px;
+  height: 100vh;
+  min-height: 0;
   overflow: hidden;
   background:
     radial-gradient(circle at 50% 42%, rgba(255, 246, 219, 0.12), transparent 34%),
@@ -80,240 +59,85 @@ a {
 }
 
 .forest-stage,
-.forest-effect,
+.viewport,
 .forest-vignette {
   position: absolute;
   inset: 0;
 }
 
-.forest-stage {
+.forest-stage,
+.viewport {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
   z-index: 1;
   overflow: hidden;
 }
 
-.map-content {
+.forest-world,
+.world {
   position: absolute;
-  left: 50%;
-  top: 50%;
+  left: var(--camera-x);
+  top: var(--camera-y);
   width: var(--map-base-width);
   height: var(--map-base-height);
-  aspect-ratio: auto;
-  min-width: 0;
-  max-width: none;
-  min-height: 0;
-  transform: translate3d(calc(-50% + var(--map-x)), calc(-50% + var(--map-y)), 0) scale(var(--map-scale));
-  transform-origin: var(--camera-origin-x) var(--camera-origin-y);
-  animation: mapContentIntro var(--camera-duration) cubic-bezier(0.2, 0.76, 0.2, 1) forwards;
+  transform: scale(var(--stage-scale));
+  transform-origin: top left;
+}
+
+#stage {
+  position: absolute;
+  width: 1920px;
+  height: 1080px;
+  transform-origin: top left;
+}
+
+#stage * {
+  box-sizing: border-box;
+}
+
+.map-content,
+.forest-ui {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 10;
+  width: var(--map-base-width);
+  height: var(--map-base-height);
   backface-visibility: hidden;
   isolation: isolate;
-  will-change: transform;
+}
+
+.forest-background {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 0;
+  width: var(--map-base-width);
+  height: var(--map-base-height);
+  overflow: hidden;
+  pointer-events: none;
 }
 
 .forest-bg {
   position: absolute;
   inset: 0;
-  z-index: 0;
   display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: fill;
-  object-position: center center;
-  filter: saturate(var(--time-saturate)) contrast(var(--time-contrast)) brightness(var(--time-brightness));
-  pointer-events: none;
-  transition: filter 12s ease;
-}
-
-.sky-atmosphere {
-  position: absolute;
-  left: 0;
-  top: 0;
-  z-index: 1;
-  width: 100%;
-  height: var(--sky-layer-height);
-  overflow: hidden;
-  pointer-events: none;
-  mask-image: linear-gradient(180deg, #000 0%, #000 66%, transparent 100%);
-  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 66%, transparent 100%);
-}
-
-.sky-atmosphere span {
-  position: absolute;
-  inset: 0;
-  display: block;
-  pointer-events: none;
-  transition: opacity 12s ease, filter 12s ease;
-}
-
-.sky-atmosphere__clear {
-  background:
-    radial-gradient(ellipse at 52% 8%, rgba(255, 255, 255, 0.18), transparent 34%),
-    linear-gradient(180deg, rgba(69, 169, 235, 0.38) 0%, rgba(121, 204, 247, 0.2) 48%, rgba(181, 230, 255, 0.06) 100%);
-  mix-blend-mode: screen;
-  opacity: var(--sky-clear-opacity);
-}
-
-.sky-atmosphere__sunset {
-  background:
-    radial-gradient(ellipse at 50% 16%, rgba(255, 216, 123, 0.78), transparent 27%),
-    radial-gradient(ellipse at 49% 33%, rgba(255, 91, 91, 0.58), transparent 45%),
-    linear-gradient(180deg, rgba(58, 72, 166, 0.38) 0%, rgba(255, 126, 83, 0.42) 52%, rgba(255, 199, 109, 0.16) 100%);
-  mix-blend-mode: soft-light;
-  opacity: var(--sunset-opacity);
-}
-
-.sky-atmosphere__stars {
-  background:
-    radial-gradient(circle at 14% 20%, rgba(255, 248, 215, 0.9) 0 1px, transparent 1.7px),
-    radial-gradient(circle at 27% 11%, rgba(223, 244, 255, 0.72) 0 1px, transparent 1.6px),
-    radial-gradient(circle at 42% 24%, rgba(255, 248, 215, 0.84) 0 1px, transparent 1.7px),
-    radial-gradient(circle at 61% 13%, rgba(223, 244, 255, 0.76) 0 1px, transparent 1.6px),
-    radial-gradient(circle at 78% 28%, rgba(255, 248, 215, 0.86) 0 1px, transparent 1.8px),
-    radial-gradient(circle at 91% 16%, rgba(223, 244, 255, 0.7) 0 1px, transparent 1.6px);
-  background-size: 100% 100%;
-  mix-blend-mode: screen;
-  opacity: calc(var(--star-opacity) * 0.9);
-  animation: starBreath 7s ease-in-out infinite;
-}
-
-.sky-atmosphere__clouds {
-  background:
-    radial-gradient(ellipse at 12% 39%, rgba(255, 255, 255, 0.22), transparent 21%),
-    radial-gradient(ellipse at 27% 31%, rgba(255, 255, 255, 0.2), transparent 19%),
-    radial-gradient(ellipse at 74% 22%, rgba(255, 255, 255, 0.16), transparent 23%),
-    radial-gradient(ellipse at 88% 37%, rgba(255, 255, 255, 0.18), transparent 20%);
-  filter: blur(12px);
-  mix-blend-mode: screen;
-  opacity: var(--sky-cloud-opacity);
-  transform: translateX(-2%);
-  animation: skyCloudDrift 62s ease-in-out infinite alternate;
-}
-
-.sky-atmosphere__haze {
-  background:
-    linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, 0.16) 58%, rgba(226, 245, 255, 0.08) 100%),
-    radial-gradient(ellipse at 48% 84%, rgba(255, 245, 210, 0.2), transparent 46%);
-  filter: blur(5px);
-  mix-blend-mode: screen;
-  opacity: var(--sky-haze-opacity);
-}
-
-.time-atmosphere {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.time-atmosphere::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  background:
-    radial-gradient(ellipse at 50% 8%, rgba(255, 179, 88, 0.46), transparent 24%),
-    linear-gradient(180deg, rgba(255, 109, 86, 0.2) 0%, transparent 38%);
-  mix-blend-mode: soft-light;
-  opacity: calc(var(--sunset-opacity) * 0.54);
-  transition: opacity 12s ease;
-  pointer-events: none;
-}
-
-.time-atmosphere__tone,
-.time-atmosphere__rain,
-.time-atmosphere__stars,
-.time-atmosphere__lamps {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  transition: opacity 12s ease, background 12s ease, filter 12s ease;
-}
-
-.time-atmosphere__tone {
-  z-index: 2;
-  background:
-    radial-gradient(circle at 50% 38%, rgba(255, 255, 246, 0.1), transparent 28%),
-    linear-gradient(180deg, var(--time-coolness), var(--time-warmth) 46%, var(--time-darkness));
-  mix-blend-mode: soft-light;
-  opacity: 0.78;
-}
-
-.time-atmosphere__stars {
-  z-index: 3;
-  opacity: var(--star-opacity);
-  background:
-    radial-gradient(circle at 18% 17%, rgba(255, 248, 215, 0.9) 0 1px, transparent 1.7px),
-    radial-gradient(circle at 34% 9%, rgba(222, 245, 255, 0.74) 0 1px, transparent 1.6px),
-    radial-gradient(circle at 58% 15%, rgba(255, 248, 215, 0.86) 0 1px, transparent 1.7px),
-    radial-gradient(circle at 74% 8%, rgba(222, 245, 255, 0.72) 0 1px, transparent 1.6px),
-    radial-gradient(circle at 89% 22%, rgba(255, 248, 215, 0.82) 0 1px, transparent 1.8px);
-  mix-blend-mode: screen;
-  animation: starBreath 7s ease-in-out infinite;
-}
-
-.time-atmosphere__stars::after,
-.time-atmosphere__lamps::before {
-  content: "";
-  position: absolute;
-  pointer-events: none;
-}
-
-.time-atmosphere__stars::after {
-  left: 73%;
-  top: 11%;
-  width: 96px;
-  height: 2px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, transparent, rgba(255, 250, 222, 0.9), transparent);
+  width: var(--map-base-width);
+  height: var(--map-base-height);
+  object-fit: cover;
   opacity: 0;
-  rotate: -17deg;
-  animation: shootingStar 26s 9s ease-in-out infinite;
+  pointer-events: none;
+  transition: opacity 2.6s ease;
 }
 
-.time-atmosphere__lamps {
-  z-index: 4;
-  opacity: var(--lamp-opacity);
-  background:
-    radial-gradient(circle at 88% 28%, rgba(255, 190, 82, 0.42), transparent 3.8%),
-    radial-gradient(circle at 84% 42%, rgba(255, 178, 70, 0.34), transparent 3.4%),
-    radial-gradient(circle at 90% 64%, rgba(255, 188, 79, 0.4), transparent 4.2%),
-    radial-gradient(circle at 76% 82%, rgba(255, 180, 74, 0.3), transparent 3.6%),
-    radial-gradient(circle at 59% 84%, rgba(255, 180, 72, 0.34), transparent 3.6%),
-    radial-gradient(circle at 38% 68%, rgba(255, 186, 76, 0.26), transparent 3.2%),
-    radial-gradient(circle at 20% 86%, rgba(255, 194, 84, 0.38), transparent 4.4%),
-    radial-gradient(circle at 8% 66%, rgba(255, 176, 72, 0.32), transparent 4.2%),
-    radial-gradient(circle at 21% 52%, rgba(255, 204, 112, 0.28), transparent 4.6%),
-    radial-gradient(circle at 47% 43%, rgba(255, 208, 119, 0.2), transparent 3.8%);
-  filter: blur(2.8px) saturate(1.16);
-  mix-blend-mode: screen;
-  animation: lampFlicker 7.5s ease-in-out infinite;
+.forest-bg.is-visible {
+  opacity: 1;
 }
 
-.forest-time--evening .time-atmosphere__lamps {
-  animation: eveningLampWake 14s ease-in-out infinite;
-}
-
-.forest-time--evening .forest-vignette {
-  background:
-    radial-gradient(ellipse at 50% 12%, rgba(255, 143, 78, 0.14), transparent 34%),
-    radial-gradient(circle at 50% 48%, transparent 38%, rgba(12, 22, 20, 0.34) 76%, rgba(4, 8, 11, 0.68) 100%),
-    linear-gradient(180deg, rgba(255, 124, 86, 0.12), transparent 32%, rgba(7, 13, 19, 0.34));
-}
-
-.time-atmosphere__rain {
-  z-index: 5;
-  opacity: var(--rain-opacity);
-  background-image:
-    repeating-linear-gradient(
-      108deg,
-      rgba(206, 235, 255, 0) 0 13px,
-      rgba(206, 235, 255, 0.28) 14px,
-      rgba(206, 235, 255, 0) 17px
-    );
-  background-size: 180px 180px;
-  filter: blur(0.2px);
-  mix-blend-mode: screen;
-  animation: forestRainFall 680ms linear infinite;
+body.camera-intro .forest-scene {
+  cursor: default;
 }
 
 .map-atmosphere,
@@ -328,6 +152,56 @@ a {
 
 .map-atmosphere {
   z-index: 1;
+}
+
+.forest-milkyway {
+  position: absolute;
+  left: 760px;
+  top: 430px;
+  z-index: 1;
+  display: block;
+  width: 1500px;
+  height: auto;
+  opacity: 0;
+  filter: drop-shadow(0 0 20px rgba(196, 225, 255, 0.28));
+  mix-blend-mode: screen;
+  pointer-events: none;
+  transform: translate(-50%, -50%) rotate(0deg);
+  transform-origin: center;
+  transition: opacity 3.4s ease, filter 3.4s ease;
+}
+
+.forest-milkyway.is-visible {
+  opacity: 0.58;
+  animation: milkyWayBreath 9s ease-in-out infinite;
+}
+
+.forest-moon {
+  position: absolute;
+  left: 1352px;
+  top: 83px;
+  z-index: 1;
+  display: block;
+  width: var(--moon-size, 108px);
+  height: auto;
+  opacity: 0;
+  filter: drop-shadow(0 0 18px rgba(238, 247, 255, 0.28));
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0.98);
+  transform-origin: center;
+  transition: opacity 2.6s ease, transform 2.6s ease, filter 2.6s ease;
+}
+
+.forest-moon.is-visible {
+  opacity: var(--moon-opacity, 0.72);
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.forest-moon.is-super {
+  --moon-size: 160px;
+  --moon-opacity: 0.78;
+  filter: drop-shadow(0 0 26px rgba(255, 248, 222, 0.46));
+  animation: superMoonGlow 5.8s ease-in-out infinite;
 }
 
 .map-mist {
@@ -497,7 +371,6 @@ a {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: contain;
   image-rendering: auto;
   filter: drop-shadow(0 4px 5px rgba(7, 15, 11, 0.22));
   user-select: none;
@@ -722,19 +595,6 @@ a {
   transform: translateY(0) rotate(-0.8deg);
 }
 
-.forest-effect {
-  z-index: 2;
-  pointer-events: none;
-}
-
-.forest-effect--light {
-  background:
-    radial-gradient(circle at 52% 36%, rgba(255, 246, 210, 0.19), transparent 21%),
-    radial-gradient(circle at 41% 63%, rgba(139, 213, 188, 0.13), transparent 30%);
-  mix-blend-mode: screen;
-  opacity: 0.62;
-}
-
 .forest-vignette {
   z-index: 3;
   pointer-events: none;
@@ -776,14 +636,13 @@ body.intro-finished .forest-title {
   z-index: 3;
   display: block;
   width: var(--portal-size);
-  margin-top: calc(var(--portal-size) * var(--portal-offset-y, -0.5));
-  margin-left: calc(var(--portal-size) * -0.5);
   border: 0;
   padding: 0;
   background: transparent;
   cursor: pointer;
   opacity: var(--portal-opacity, 0.92);
   pointer-events: none;
+  transform: translate(-50%, -50%);
   transform-origin: center bottom;
   transition:
     opacity 900ms ease,
@@ -846,15 +705,15 @@ body.intro-finished .forest-portal--fortune .portal-caption {
 .forest-portal--game {
   --portal-size: 138px;
   --portal-opacity: 0.9;
-  left: 1080px;
-  top: 815px;
+  left: 1351px;
+  top: 756px;
 }
 
 .forest-portal--fortune {
   --portal-size: 82px;
   --portal-opacity: 0.9;
-  left: 890px;
-  top: 425px;
+  left: 1169px;
+  top: 397px;
   opacity: 0;
   transform-origin: 50% 0%;
 }
@@ -866,22 +725,22 @@ body.intro-finished .forest-portal--fortune {
 .forest-portal--shrine {
   --portal-size: 142px;
   --portal-opacity: 0.86;
-  left: 760px;
-  top: 522px;
+  left: 1064px;
+  top: 558px;
 }
 
 .forest-portal--onsen {
   --portal-size: 154px;
   --portal-opacity: 0.82;
-  left: 118px;
-  top: 545px;
+  left: 103px;
+  top: 587px;
 }
 
 .forest-portal--character {
-  --portal-size: 108px;
+  --portal-size: 124px;
   --portal-opacity: 0.88;
-  left: 650px;
-  top: 280px;
+  left: 561px;
+  top: 373px;
 }
 
 .forest-portal--character::before {
@@ -904,22 +763,22 @@ body.intro-finished .forest-portal--fortune {
 .forest-portal--artwork {
   --portal-size: 102px;
   --portal-opacity: 0.88;
-  left: 1050px;
-  top: 520px;
+  left: 1332px;
+  top: 542px;
 }
 
 .forest-portal--blog {
   --portal-size: 94px;
   --portal-opacity: 0.86;
-  left: 1360px;
-  top: 548px;
+  left: 1630px;
+  top: 561px;
 }
 
 .forest-portal--contact {
   --portal-size: 66px;
   --portal-opacity: 0.82;
-  left: 92px;
-  top: 850px;
+  left: 38px;
+  top: 942px;
 }
 
 .hidden-drop {
@@ -1071,7 +930,6 @@ body.intro-finished .mint-guide.is-active {
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: contain;
   filter: drop-shadow(0 6px 10px rgba(7, 18, 12, 0.28));
   animation: mintFloat 4.6s ease-in-out infinite;
   user-select: none;
@@ -1279,6 +1137,16 @@ body.mobile-walker-disabled .mobile-walker {
   transition: opacity 260ms ease, transform 260ms ease;
 }
 
+.forest-toast.is-actionable {
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.forest-toast.is-actionable:hover {
+  border-color: rgba(255, 230, 106, 0.68);
+  background: rgba(38, 56, 38, 0.84);
+}
+
 .forest-toast.is-visible {
   opacity: 1;
   transform: translate(-50%, 0);
@@ -1388,36 +1256,6 @@ body.debug-panel-hidden .debug-panel {
   width: 16px;
   height: 16px;
   accent-color: #f0d36f;
-}
-
-@keyframes mapContentIntro {
-  0% {
-    transform: translate3d(calc(-50% + var(--camera-start-x)), calc(-50% + var(--camera-start-y)), 0) scale(var(--camera-start-scale));
-  }
-
-  100% {
-    transform: translate3d(calc(-50% + var(--camera-end-x)), calc(-50% + var(--camera-end-y)), 0) scale(var(--camera-end-scale));
-  }
-}
-
-@keyframes forestRainFall {
-  0% {
-    background-position: 0 0;
-  }
-
-  100% {
-    background-position: -54px 180px;
-  }
-}
-
-@keyframes skyCloudDrift {
-  0% {
-    transform: translate3d(-2%, 0, 0) scale(1);
-  }
-
-  100% {
-    transform: translate3d(2.5%, -2%, 0) scale(1.04);
-  }
 }
 
 @keyframes memoryGlow {
@@ -1677,62 +1515,25 @@ body.debug-panel-hidden .debug-panel {
   }
 }
 
-@keyframes starBreath {
+@keyframes superMoonGlow {
   0%,
   100% {
-    filter: brightness(0.86);
+    filter: drop-shadow(0 0 24px rgba(255, 248, 222, 0.4));
   }
 
   50% {
-    filter: brightness(1.12);
+    filter: drop-shadow(0 0 38px rgba(255, 248, 222, 0.6));
   }
 }
 
-@keyframes shootingStar {
-  0%,
-  72%,
-  100% {
-    opacity: 0;
-    transform: translate3d(0, 0, 0) scaleX(0.35);
-  }
-
-  75% {
-    opacity: 0.64;
-  }
-
-  79% {
-    opacity: 0;
-    transform: translate3d(-26vw, 8vh, 0) scaleX(1);
-  }
-}
-
-@keyframes lampFlicker {
+@keyframes milkyWayBreath {
   0%,
   100% {
-    filter: blur(2px) brightness(0.92);
+    filter: drop-shadow(0 0 20px rgba(196, 225, 255, 0.28));
   }
 
-  45% {
-    filter: blur(2.4px) brightness(1.1);
-  }
-
-  68% {
-    filter: blur(2px) brightness(0.98);
-  }
-}
-
-@keyframes eveningLampWake {
-  0%,
-  100% {
-    filter: blur(2.8px) saturate(1.14) brightness(0.92);
-  }
-
-  34% {
-    filter: blur(3.2px) saturate(1.24) brightness(1.14);
-  }
-
-  62% {
-    filter: blur(2.9px) saturate(1.2) brightness(1.03);
+  50% {
+    filter: drop-shadow(0 0 34px rgba(213, 235, 255, 0.46));
   }
 }
 
@@ -1948,14 +1749,8 @@ body.debug-panel-hidden .debug-panel {
 
 @media (min-width: 760px) {
   :root {
-    --camera-start-scale: 0.7;
-    --camera-end-scale: 1.22;
-    --camera-end-x: -1vw;
-    --camera-end-y: 4vh;
-    --camera-origin-x: 53%;
-    --camera-origin-y: 47%;
-    --map-base-width: 1536px;
-    --map-base-height: 1024px;
+    --map-base-width: 1920px;
+    --map-base-height: 1080px;
   }
 
   .forest-toast {
@@ -1970,38 +1765,24 @@ body.debug-panel-hidden .debug-panel {
 @media (max-width: 759px) {
   html,
   body {
-    height: auto;
-    min-height: 100%;
-    overflow-x: hidden;
-    overflow-y: auto;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
   }
 
   body {
-    touch-action: pan-y;
+    touch-action: none;
   }
 
   .forest-scene {
-    height: 220svh;
-    min-height: 1180px;
+    height: 100vh;
+    min-height: 0;
     cursor: default;
   }
 
-  .forest-stage {
-    position: sticky;
-    top: 0;
-    height: 100svh;
-  }
-
   :root {
-    --camera-start-scale: 0.54;
-    --camera-end-scale: 1.32;
-    --camera-end-x: -2vw;
-    --camera-end-y: 6vh;
-    --camera-origin-x: 53%;
-    --camera-origin-y: 49%;
-    --camera-duration: 4s;
-    --map-base-width: 1536px;
-    --map-base-height: 1024px;
+    --map-base-width: 1920px;
+    --map-base-height: 1080px;
   }
 
   .forest-narration {
@@ -2061,15 +1842,12 @@ body.debug-panel-hidden .debug-panel {
   .mobile-walker,
   .mobile-walker__image,
   .mobile-walker__bubble,
-  .time-atmosphere__rain,
-  .time-atmosphere__stars,
-  .time-atmosphere__lamps,
-  .sky-atmosphere__stars,
-  .sky-atmosphere__clouds,
   .map-mist,
   .ambient-particle,
   .forest-bird,
   .forest-ground-bird,
+  .forest-milkyway,
+  .forest-moon,
   .bottle-mail {
     animation-duration: 4s;
   }

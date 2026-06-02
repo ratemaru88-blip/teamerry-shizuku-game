@@ -486,26 +486,6 @@
     }
   };
 
-  const isMilkyWayNight = () => {
-    const today = getTodayKey();
-    const storageKey = `teamerryMilkyWay:${today}`;
-
-    try {
-      const saved = window.localStorage.getItem(storageKey);
-
-      if (saved) {
-        return saved === "1";
-      }
-
-      const active = Math.random() < 0.28;
-      window.localStorage.setItem(storageKey, active ? "1" : "0");
-
-      return active;
-    } catch (error) {
-      return Math.random() < 0.28;
-    }
-  };
-
   const getMoonPhaseName = () => {
     const now = new Date();
     const minutes = now.getHours() * 60 + now.getMinutes();
@@ -530,7 +510,7 @@
       return;
     }
 
-    milkyWay.classList.toggle("is-visible", timeName === "night" && isMilkyWayNight());
+    milkyWay.classList.toggle("is-visible", timeName === "night");
   };
 
   const showSuperMoonNotice = () => {

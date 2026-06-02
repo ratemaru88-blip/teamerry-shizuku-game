@@ -156,23 +156,23 @@ body.camera-intro .forest-scene {
 
 .forest-milkyway {
   position: absolute;
-  left: 760px;
-  top: 430px;
+  left: 620px;
+  top: 0;
   z-index: 1;
   display: block;
-  width: 1500px;
+  width: 512px;
   height: auto;
   opacity: 0;
   filter: drop-shadow(0 0 20px rgba(196, 225, 255, 0.28));
   mix-blend-mode: screen;
   pointer-events: none;
-  transform: translate(-50%, -50%) rotate(0deg);
-  transform-origin: center;
+  transform: rotate(0deg);
+  transform-origin: left top;
   transition: opacity 3.4s ease, filter 3.4s ease;
 }
 
 .forest-milkyway.is-visible {
-  opacity: 0.58;
+  opacity: 0.72;
   animation: milkyWayBreath 9s ease-in-out infinite;
 }
 

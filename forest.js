@@ -121,11 +121,9 @@
   ];
 
   const bottleMessages = [
-    "昨日の夜、\n湖にはたくさんの星が映っていました。",
-    "今日は深い霧の予感がします。",
-    "小鳥たちが橋の近くで羽を休めていました。",
-    "流れの遅い場所に、光が少しだけ残っています。",
-    "森は今朝、静かに目を覚ましたようです。",
+    "イベントのお知らせが届いています。\n本文DATAはこれから入ります。",
+    "作者からのお知らせが届いています。\n本文DATAはこれから入ります。",
+    "妖精からのお手紙が届いています。\n本文DATAはこれから入ります。",
   ];
 
   const birdPerches = [
@@ -143,9 +141,30 @@
   ];
 
   const bottleRoutes = [
-    { x: 63, y: 64, midX: "-4vw", midY: "1.4vh", endX: "-17vw", endY: "4vh" },
-    { x: 80, y: 60, midX: "-6vw", midY: "-1vh", endX: "-20vw", endY: "2.5vh" },
-    { x: 47, y: 69, midX: "5vw", midY: "1vh", endX: "17vw", endY: "-2vh" },
+    {
+      name: "river-downstream",
+      startX: 1118,
+      startY: 742,
+      midX: 1018,
+      midY: 854,
+      endX: 906,
+      endY: 1003,
+      startTilt: -18,
+      midTilt: 7,
+      endTilt: -10,
+    },
+    {
+      name: "waterfall",
+      startX: 1380,
+      startY: 562,
+      midX: 1306,
+      midY: 646,
+      endX: 1214,
+      endY: 719,
+      startTilt: -12,
+      midTilt: 10,
+      endTilt: -16,
+    },
   ];
 
   let currentBird = null;
@@ -1204,35 +1223,47 @@
     }, 6600);
   };
 
-  const spawnBottle = () => {
-    if (!driftLayer || reduceMotion) {
+  const spawnBottle = (routeName = "", isTest = false) => {
+    if (!driftLayer) {
       return;
     }
 
-    const route = pick(bottleRoutes);
+    driftLayer.querySelectorAll(".bottle-mail").forEach((activeBottle) => activeBottle.remove());
+
+    const route = bottleRoutes.find((item) => item.name === routeName) || pick(bottleRoutes);
     const bottle = document.createElement("button");
     bottle.type = "button";
     bottle.className = "bottle-mail";
     bottle.setAttribute("aria-label", "流れてきたボトルメールを読む");
-    bottle.style.setProperty("--bottle-x", `${route.x}%`);
-    bottle.style.setProperty("--bottle-y", `${route.y}%`);
-    bottle.style.setProperty("--bottle-mid-x", route.midX);
-    bottle.style.setProperty("--bottle-mid-y", route.midY);
-    bottle.style.setProperty("--bottle-end-x", route.endX);
-    bottle.style.setProperty("--bottle-end-y", route.endY);
-    const tilt = randomBetween(-10, 10);
-    bottle.style.setProperty("--bottle-tilt", `${tilt}deg`);
-    bottle.style.setProperty("--bottle-mid-tilt", `${tilt * -0.8}deg`);
-    bottle.style.setProperty("--bottle-duration", `${randomBetween(22, 34)}s`);
+    bottle.style.setProperty("--bottle-start-x", `${route.startX}px`);
+    bottle.style.setProperty("--bottle-start-y", `${route.startY}px`);
+    bottle.style.setProperty("--bottle-mid-x", `${route.midX - route.startX}px`);
+    bottle.style.setProperty("--bottle-mid-y", `${route.midY - route.startY}px`);
+    bottle.style.setProperty("--bottle-early-x", `${(route.midX - route.startX) * 0.54}px`);
+    bottle.style.setProperty("--bottle-early-y", `${(route.midY - route.startY) * 0.48}px`);
+    bottle.style.setProperty("--bottle-end-x", `${route.endX - route.startX}px`);
+    bottle.style.setProperty("--bottle-end-y", `${route.endY - route.startY}px`);
+    bottle.style.setProperty("--bottle-start-tilt", `${route.startTilt + randomBetween(-4, 4)}deg`);
+    bottle.style.setProperty("--bottle-mid-tilt", `${route.midTilt + randomBetween(-5, 5)}deg`);
+    bottle.style.setProperty("--bottle-end-tilt", `${route.endTilt + randomBetween(-3, 3)}deg`);
+    bottle.style.setProperty("--bottle-duration", `${reduceMotion ? 4 : isTest ? 7 : randomBetween(16, 23)}s`);
     driftLayer.append(bottle);
 
     bottle.addEventListener("click", (event) => {
       event.preventDefault();
+      if (!bottle.classList.contains("is-arrived")) {
+        return;
+      }
+      bottle.classList.add("is-opening");
       showBottleLetter(pick(bottleMessages));
       playSoftTone(660, 0.2, 0.012);
-      bottle.remove();
+      window.setTimeout(() => bottle.remove(), 780);
     });
-    bottle.addEventListener("animationend", () => bottle.remove(), { once: true });
+    bottle.addEventListener("animationend", () => {
+      bottle.classList.add("is-arrived");
+      bottle.setAttribute("aria-label", "漂着したボトルメールを開く");
+      showToast("ボトルメールが流れ着きました。");
+    }, { once: true });
   };
 
   const scheduleBottle = (delay = getDebugDelay(36000, 86000, 5000, 7600)) => {
@@ -1409,7 +1440,7 @@
     const bottleButton = debugPanel.querySelector('[data-debug-action="bottle"]');
     if (bottleButton) {
       bottleButton.addEventListener("click", () => {
-        spawnBottle();
+        spawnBottle("", true);
         showToast("ボトルメールを流しました。");
       });
     }

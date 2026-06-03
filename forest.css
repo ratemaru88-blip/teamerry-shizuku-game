@@ -517,23 +517,22 @@ body.camera-intro .forest-scene {
 
 .bottle-mail {
   position: absolute;
-  left: var(--bottle-x);
-  top: var(--bottle-y);
+  left: var(--bottle-start-x);
+  top: var(--bottle-start-y);
   z-index: 4;
-  width: clamp(28px, 2.8vw, 42px);
-  height: clamp(14px, 1.4vw, 22px);
+  width: 132px;
+  height: 132px;
   border: 0;
-  border-radius: 999px 30% 30% 999px;
   padding: 0;
-  background:
-    linear-gradient(90deg, rgba(210, 246, 234, 0.74), rgba(245, 255, 241, 0.48) 58%, rgba(100, 154, 128, 0.32)),
-    radial-gradient(circle at 30% 46%, rgba(255, 243, 189, 0.72), transparent 28%);
-  box-shadow: 0 0 9px rgba(211, 255, 232, 0.2);
+  border-radius: 50%;
+  background: url("./assets/images/events/BottleMail.webp") center / contain no-repeat;
+  filter: drop-shadow(0 9px 8px rgba(15, 34, 26, 0.32));
   opacity: 0;
   pointer-events: auto;
   cursor: pointer;
-  transform: translate(-50%, -50%) rotate(var(--bottle-tilt));
-  animation: bottleDrift var(--bottle-duration) linear forwards;
+  transform: translate(-50%, -50%) rotate(var(--bottle-start-tilt)) scale(0.84);
+  transform-origin: 52% 54%;
+  animation: bottleDrift var(--bottle-duration) cubic-bezier(0.34, 0.02, 0.22, 1) forwards;
 }
 
 .bottle-mail::before,
@@ -544,27 +543,58 @@ body.camera-intro .forest-scene {
 }
 
 .bottle-mail::before {
-  right: -18%;
-  top: 24%;
-  width: 25%;
-  height: 52%;
-  border-radius: 0 999px 999px 0;
-  background: rgba(226, 244, 226, 0.56);
+  right: 14%;
+  top: 20%;
+  width: 22px;
+  height: 18px;
+  border-radius: 42% 50% 46% 44%;
+  background:
+    radial-gradient(circle at 36% 34%, rgba(131, 84, 44, 0.32), transparent 24%),
+    linear-gradient(135deg, rgba(168, 117, 65, 0.72), rgba(96, 58, 29, 0.68));
+  opacity: 0;
+  transform: rotate(18deg);
 }
 
 .bottle-mail::after {
-  left: 21%;
-  top: 30%;
-  width: 34%;
-  height: 44%;
-  border-radius: 2px;
-  background: rgba(160, 104, 63, 0.44);
-  rotate: -5deg;
+  inset: 36% 14% 18% 15%;
+  border-radius: 999px;
+  background: radial-gradient(ellipse, rgba(214, 247, 255, 0.34), transparent 68%);
+  mix-blend-mode: screen;
+  opacity: 0.38;
 }
 
 .bottle-mail:focus-visible {
   outline: 1px solid rgba(255, 246, 219, 0.54);
   outline-offset: 5px;
+}
+
+.bottle-mail.is-arrived {
+  opacity: 0.9;
+  animation: bottleArrived 4.8s ease-in-out infinite;
+}
+
+.bottle-mail.is-opening {
+  pointer-events: none;
+  animation: bottleOpen 780ms cubic-bezier(0.16, 0.84, 0.28, 1) forwards;
+}
+
+.bottle-mail.is-opening::before {
+  opacity: 0.9;
+  animation: bottleCorkPop 780ms cubic-bezier(0.16, 0.84, 0.28, 1) forwards;
+}
+
+.forest-time--night .bottle-mail {
+  filter:
+    drop-shadow(0 0 10px rgba(178, 236, 255, 0.72))
+    drop-shadow(0 0 22px rgba(255, 240, 163, 0.42))
+    drop-shadow(0 9px 8px rgba(5, 12, 18, 0.48));
+}
+
+.forest-time--night .bottle-mail::after {
+  inset: -18%;
+  background: radial-gradient(ellipse, rgba(180, 235, 255, 0.5), rgba(255, 238, 156, 0.18) 42%, transparent 70%);
+  opacity: 0.72;
+  animation: bottleNightGlow 2.8s ease-in-out infinite;
 }
 
 .forest-letter {
@@ -1726,24 +1756,87 @@ body.debug-panel-hidden .debug-panel {
 @keyframes bottleDrift {
   0% {
     opacity: 0;
-    transform: translate(-50%, -50%) rotate(var(--bottle-tilt));
+    transform: translate(-50%, -50%) rotate(var(--bottle-start-tilt)) scale(0.76);
   }
 
   12% {
-    opacity: 0.66;
+    opacity: 0.72;
   }
 
-  54% {
-    transform: translate(calc(-50% + var(--bottle-mid-x)), calc(-50% + var(--bottle-mid-y))) rotate(var(--bottle-mid-tilt));
+  34% {
+    transform: translate(calc(-50% + var(--bottle-early-x)), calc(-50% + var(--bottle-early-y) - 16px)) rotate(var(--bottle-mid-tilt)) scale(0.9);
+  }
+
+  62% {
+    opacity: 0.86;
+    transform: translate(calc(-50% + var(--bottle-mid-x)), calc(-50% + var(--bottle-mid-y))) rotate(var(--bottle-mid-tilt)) scale(1);
   }
 
   90% {
-    opacity: 0.56;
+    opacity: 0.9;
+    transform: translate(calc(-50% + var(--bottle-end-x) - 16px), calc(-50% + var(--bottle-end-y) - 5px)) rotate(calc(var(--bottle-end-tilt) - 7deg)) scale(1.02);
+  }
+
+  100% {
+    opacity: 0.9;
+    transform: translate(calc(-50% + var(--bottle-end-x)), calc(-50% + var(--bottle-end-y))) rotate(var(--bottle-end-tilt)) scale(1);
+  }
+}
+
+@keyframes bottleArrived {
+  0%,
+  100% {
+    transform: translate(calc(-50% + var(--bottle-end-x)), calc(-50% + var(--bottle-end-y))) rotate(var(--bottle-end-tilt)) scale(1);
+  }
+
+  50% {
+    transform: translate(calc(-50% + var(--bottle-end-x) + 4px), calc(-50% + var(--bottle-end-y) - 3px)) rotate(calc(var(--bottle-end-tilt) + 2deg)) scale(1.01);
+  }
+}
+
+@keyframes bottleOpen {
+  0% {
+    opacity: 0.92;
+    transform: translate(calc(-50% + var(--bottle-end-x)), calc(-50% + var(--bottle-end-y))) rotate(var(--bottle-end-tilt)) scale(1);
+  }
+
+  42% {
+    opacity: 1;
+    transform: translate(calc(-50% + var(--bottle-end-x)), calc(-50% + var(--bottle-end-y) - 12px)) rotate(calc(var(--bottle-end-tilt) + 9deg)) scale(1.08);
   }
 
   100% {
     opacity: 0;
-    transform: translate(calc(-50% + var(--bottle-end-x)), calc(-50% + var(--bottle-end-y))) rotate(var(--bottle-tilt));
+    transform: translate(calc(-50% + var(--bottle-end-x)), calc(-50% + var(--bottle-end-y) - 22px)) rotate(calc(var(--bottle-end-tilt) + 18deg)) scale(0.84);
+  }
+}
+
+@keyframes bottleCorkPop {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) rotate(18deg) scale(0.8);
+  }
+
+  30% {
+    opacity: 0.95;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(24px, -38px) rotate(74deg) scale(1);
+  }
+}
+
+@keyframes bottleNightGlow {
+  0%,
+  100% {
+    opacity: 0.48;
+    scale: 0.96;
+  }
+
+  50% {
+    opacity: 0.82;
+    scale: 1.08;
   }
 }
 

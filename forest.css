@@ -520,13 +520,15 @@ body.camera-intro .forest-scene {
   left: var(--bottle-start-x);
   top: var(--bottle-start-y);
   z-index: 4;
-  width: 132px;
-  height: 132px;
+  width: clamp(118px, 7.4vw, 146px);
+  height: clamp(118px, 7.4vw, 146px);
   border: 0;
   padding: 0;
-  border-radius: 50%;
+  border-radius: 0;
   background: url("./assets/images/events/BottleMail.webp") center / contain no-repeat;
-  filter: drop-shadow(0 9px 8px rgba(15, 34, 26, 0.32));
+  filter:
+    drop-shadow(0 6px 5px rgba(15, 34, 26, 0.26))
+    drop-shadow(0 16px 10px rgba(19, 56, 67, 0.16));
   opacity: 0;
   pointer-events: auto;
   cursor: pointer;
@@ -556,11 +558,13 @@ body.camera-intro .forest-scene {
 }
 
 .bottle-mail::after {
-  inset: 36% 14% 18% 15%;
+  inset: 38% 14% 19% 16%;
   border-radius: 999px;
-  background: radial-gradient(ellipse, rgba(214, 247, 255, 0.34), transparent 68%);
+  background:
+    radial-gradient(ellipse at 50% 56%, rgba(214, 247, 255, 0.24), transparent 62%),
+    linear-gradient(90deg, transparent 8%, rgba(255, 247, 203, 0.16) 42%, transparent 78%);
   mix-blend-mode: screen;
-  opacity: 0.38;
+  opacity: 0.32;
 }
 
 .bottle-mail:focus-visible {
@@ -585,15 +589,17 @@ body.camera-intro .forest-scene {
 
 .forest-time--night .bottle-mail {
   filter:
-    drop-shadow(0 0 10px rgba(178, 236, 255, 0.72))
-    drop-shadow(0 0 22px rgba(255, 240, 163, 0.42))
-    drop-shadow(0 9px 8px rgba(5, 12, 18, 0.48));
+    drop-shadow(0 0 5px rgba(184, 238, 255, 0.4))
+    drop-shadow(0 0 12px rgba(245, 223, 143, 0.22))
+    drop-shadow(0 8px 7px rgba(5, 12, 18, 0.46));
 }
 
 .forest-time--night .bottle-mail::after {
-  inset: -18%;
-  background: radial-gradient(ellipse, rgba(180, 235, 255, 0.5), rgba(255, 238, 156, 0.18) 42%, transparent 70%);
-  opacity: 0.72;
+  inset: 37% 13% 18% 15%;
+  background:
+    radial-gradient(ellipse at 48% 56%, rgba(187, 239, 255, 0.28), transparent 62%),
+    linear-gradient(90deg, transparent 6%, rgba(255, 235, 166, 0.2) 42%, transparent 76%);
+  opacity: 0.44;
   animation: bottleNightGlow 2.8s ease-in-out infinite;
 }
 
@@ -1764,7 +1770,7 @@ body.debug-panel-hidden .debug-panel {
   }
 
   34% {
-    transform: translate(calc(-50% + var(--bottle-early-x)), calc(-50% + var(--bottle-early-y) - 16px)) rotate(var(--bottle-mid-tilt)) scale(0.9);
+    transform: translate(calc(-50% + var(--bottle-early-x) + 3px), calc(-50% + var(--bottle-early-y) - 5px)) rotate(var(--bottle-mid-tilt)) scale(0.9);
   }
 
   62% {
@@ -1774,7 +1780,7 @@ body.debug-panel-hidden .debug-panel {
 
   90% {
     opacity: 0.9;
-    transform: translate(calc(-50% + var(--bottle-end-x) - 16px), calc(-50% + var(--bottle-end-y) - 5px)) rotate(calc(var(--bottle-end-tilt) - 7deg)) scale(1.02);
+    transform: translate(calc(-50% + var(--bottle-end-x) - 6px), calc(-50% + var(--bottle-end-y) - 4px)) rotate(calc(var(--bottle-end-tilt) - 4deg)) scale(1.01);
   }
 
   100% {
@@ -1789,8 +1795,16 @@ body.debug-panel-hidden .debug-panel {
     transform: translate(calc(-50% + var(--bottle-end-x)), calc(-50% + var(--bottle-end-y))) rotate(var(--bottle-end-tilt)) scale(1);
   }
 
+  28% {
+    transform: translate(calc(-50% + var(--bottle-end-x) - 3px), calc(-50% + var(--bottle-end-y) - 5px)) rotate(calc(var(--bottle-end-tilt) - 1.5deg)) scale(1.005);
+  }
+
   50% {
-    transform: translate(calc(-50% + var(--bottle-end-x) + 4px), calc(-50% + var(--bottle-end-y) - 3px)) rotate(calc(var(--bottle-end-tilt) + 2deg)) scale(1.01);
+    transform: translate(calc(-50% + var(--bottle-end-x) + 4px), calc(-50% + var(--bottle-end-y) - 3px)) rotate(calc(var(--bottle-end-tilt) + 1.5deg)) scale(1.008);
+  }
+
+  74% {
+    transform: translate(calc(-50% + var(--bottle-end-x) + 2px), calc(-50% + var(--bottle-end-y) + 2px)) rotate(calc(var(--bottle-end-tilt) + 0.5deg)) scale(1);
   }
 }
 
@@ -1830,13 +1844,13 @@ body.debug-panel-hidden .debug-panel {
 @keyframes bottleNightGlow {
   0%,
   100% {
-    opacity: 0.48;
-    scale: 0.96;
+    opacity: 0.32;
+    scale: 0.98;
   }
 
   50% {
-    opacity: 0.82;
-    scale: 1.08;
+    opacity: 0.52;
+    scale: 1.02;
   }
 }
 

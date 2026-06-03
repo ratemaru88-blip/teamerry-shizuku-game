@@ -342,11 +342,19 @@
     renderMap();
 
     window.setTimeout(() => {
+      if (!state.intro) {
+        return;
+      }
+
       animateCameraTo({
         x: mid.x,
         y: mid.y,
         duration: reduceMotion ? 1 : 2200,
         onComplete: () => {
+          if (!state.intro) {
+            return;
+          }
+
           const main = getCameraForWorldPoint(960, 540);
           animateCameraTo({
             x: main.x,
@@ -386,6 +394,17 @@
   const moveCameraToWorldPoint = (worldX, worldY, duration = 1300) => {
     const next = getCameraForWorldPoint(worldX, worldY);
     animateCameraTo({ x: next.x, y: next.y, duration });
+  };
+
+  const revealWorldPointForTest = (worldX, worldY) => {
+    if (state.intro || !state.enabled) {
+      state.enabled = true;
+      state.intro = false;
+      document.body.classList.remove("camera-intro");
+      document.body.classList.add("intro-finished");
+    }
+
+    moveCameraToWorldPoint(worldX, worldY, reduceMotion ? 1 : 700);
   };
 
   const showCameraNotice = (targetName) => {
@@ -1231,6 +1250,10 @@
     driftLayer.querySelectorAll(".bottle-mail").forEach((activeBottle) => activeBottle.remove());
 
     const route = bottleRoutes.find((item) => item.name === routeName) || pick(bottleRoutes);
+    if (isTest) {
+      revealWorldPointForTest(route.endX, route.endY);
+    }
+
     const bottle = document.createElement("button");
     bottle.type = "button";
     bottle.className = "bottle-mail";
@@ -1440,7 +1463,7 @@
     const bottleButton = debugPanel.querySelector('[data-debug-action="bottle"]');
     if (bottleButton) {
       bottleButton.addEventListener("click", () => {
-        spawnBottle("", true);
+        spawnBottle("waterfall", true);
         showToast("ボトルメールを流しました。");
       });
     }

@@ -520,7 +520,7 @@ body.camera-intro .forest-scene {
   position: absolute;
   left: var(--bottle-start-x);
   top: var(--bottle-start-y);
-  --bottle-size: clamp(15px, 0.95vw, 19px);
+  --bottle-size: clamp(23px, 1.43vw, 29px);
   z-index: 1;
   width: var(--bottle-size);
   height: var(--bottle-size);
@@ -534,7 +534,7 @@ body.camera-intro .forest-scene {
   opacity: 0;
   pointer-events: auto;
   cursor: pointer;
-  transform: translate(-50%, -100%) rotate(var(--bottle-start-tilt)) scale(0.54);
+  transform: translate(-50%, -100%) rotate(var(--bottle-start-tilt)) scale(0.5);
   transform-origin: 50% 100%;
   animation: bottleDrift var(--bottle-duration) cubic-bezier(0.34, 0.02, 0.22, 1) forwards;
 }
@@ -1770,27 +1770,27 @@ body.debug-panel-hidden .debug-panel {
 
 @keyframes bottleDrift {
   0% {
-    opacity: 0.18;
-    transform: translate(-50%, -100%) rotate(var(--bottle-start-tilt)) scale(0.54);
+    opacity: 0.12;
+    transform: translate(-50%, -100%) rotate(var(--bottle-start-tilt)) scale(0.5);
   }
 
   12% {
-    opacity: 0.36;
+    opacity: 0.32;
   }
 
   34% {
-    opacity: 0.58;
-    transform: translate(calc(-50% + var(--bottle-early-x)), calc(-100% + var(--bottle-early-y) - 2px)) rotate(var(--bottle-mid-tilt)) scale(0.72);
+    opacity: 0.56;
+    transform: translate(calc(-50% + var(--bottle-early-x) + 1px), calc(-100% + var(--bottle-early-y) - 3px)) rotate(var(--bottle-mid-tilt)) scale(0.7);
   }
 
   62% {
     opacity: 0.76;
-    transform: translate(calc(-50% + var(--bottle-mid-x)), calc(-100% + var(--bottle-mid-y) + 1px)) rotate(var(--bottle-mid-tilt)) scale(0.88);
+    transform: translate(calc(-50% + var(--bottle-mid-x) - 1px), calc(-100% + var(--bottle-mid-y) + 2px)) rotate(var(--bottle-mid-tilt)) scale(0.86);
   }
 
   90% {
     opacity: 0.88;
-    transform: translate(calc(-50% + var(--bottle-end-x) - 2px), calc(-100% + var(--bottle-end-y) - 2px)) rotate(calc(var(--bottle-end-tilt) - 2deg)) scale(0.98);
+    transform: translate(calc(-50% + var(--bottle-end-x) - 2px), calc(-100% + var(--bottle-end-y) - 2px)) rotate(calc(var(--bottle-end-tilt) - 2deg)) scale(0.97);
   }
 
   100% {

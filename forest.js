@@ -140,30 +140,28 @@
     { area: "stone-plaza", x: 1586, y: 794, spreadX: 86, spreadY: 28, scale: 0.94 },
   ];
 
+  const bottleDesignWidth = 1920;
+  const bottleDesignHeight = 1080;
+  const bottleMapWidth = 1536;
+  const bottleMapHeight = 1024;
+  const toBottleMapPoint = (x, y) => ({
+    x: x * bottleMapWidth / bottleDesignWidth,
+    y: y * bottleMapHeight / bottleDesignHeight,
+  });
+  const bottleRouteStart = toBottleMapPoint(1220, 675);
+  const bottleRouteEnd = toBottleMapPoint(1195, 713);
   const bottleRoutes = [
     {
-      name: "river-downstream",
-      startX: 1118,
-      startY: 742,
-      midX: 1018,
-      midY: 854,
-      endX: 906,
-      endY: 1003,
-      startTilt: -18,
-      midTilt: 7,
-      endTilt: -10,
-    },
-    {
-      name: "waterfall",
-      startX: 1380,
-      startY: 562,
-      midX: 1288,
-      midY: 674,
-      endX: 1178,
-      endY: 752,
-      startTilt: -12,
-      midTilt: 8,
-      endTilt: -12,
+      name: "waterline",
+      startX: bottleRouteStart.x,
+      startY: bottleRouteStart.y,
+      midX: (bottleRouteStart.x + bottleRouteEnd.x) / 2,
+      midY: (bottleRouteStart.y + bottleRouteEnd.y) / 2,
+      endX: bottleRouteEnd.x,
+      endY: bottleRouteEnd.y,
+      startTilt: -11,
+      midTilt: -7,
+      endTilt: -4,
     },
   ];
 
@@ -1249,7 +1247,7 @@
 
     driftLayer.querySelectorAll(".bottle-mail").forEach((activeBottle) => activeBottle.remove());
 
-    const route = bottleRoutes.find((item) => item.name === routeName) || pick(bottleRoutes);
+    const route = bottleRoutes.find((item) => item.name === routeName) || bottleRoutes[0];
     if (isTest) {
       revealWorldPointForTest(route.endX, route.endY);
     }
@@ -1266,9 +1264,9 @@
     bottle.style.setProperty("--bottle-early-y", `${(route.midY - route.startY) * 0.48}px`);
     bottle.style.setProperty("--bottle-end-x", `${route.endX - route.startX}px`);
     bottle.style.setProperty("--bottle-end-y", `${route.endY - route.startY}px`);
-    bottle.style.setProperty("--bottle-start-tilt", `${route.startTilt + randomBetween(-4, 4)}deg`);
-    bottle.style.setProperty("--bottle-mid-tilt", `${route.midTilt + randomBetween(-5, 5)}deg`);
-    bottle.style.setProperty("--bottle-end-tilt", `${route.endTilt + randomBetween(-3, 3)}deg`);
+    bottle.style.setProperty("--bottle-start-tilt", `${route.startTilt}deg`);
+    bottle.style.setProperty("--bottle-mid-tilt", `${route.midTilt}deg`);
+    bottle.style.setProperty("--bottle-end-tilt", `${route.endTilt}deg`);
     bottle.style.setProperty("--bottle-duration", `${reduceMotion ? 4 : isTest ? 7 : randomBetween(16, 23)}s`);
     driftLayer.append(bottle);
 
@@ -1463,7 +1461,7 @@
     const bottleButton = debugPanel.querySelector('[data-debug-action="bottle"]');
     if (bottleButton) {
       bottleButton.addEventListener("click", () => {
-        spawnBottle("waterfall", true);
+        spawnBottle("waterline", true);
         showToast("ボトルメールを流しました。");
       });
     }

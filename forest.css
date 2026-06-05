@@ -308,6 +308,7 @@ body.camera-intro .forest-scene {
   position: absolute;
   left: var(--ambient-x);
   top: var(--ambient-y);
+  z-index: 3;
   width: var(--ambient-size);
   height: var(--ambient-size);
   margin-left: calc(var(--ambient-size) * -0.5);
@@ -519,21 +520,22 @@ body.camera-intro .forest-scene {
   position: absolute;
   left: var(--bottle-start-x);
   top: var(--bottle-start-y);
-  z-index: 4;
-  width: clamp(118px, 7.4vw, 146px);
-  height: clamp(118px, 7.4vw, 146px);
+  --bottle-size: clamp(15px, 0.95vw, 19px);
+  z-index: 1;
+  width: var(--bottle-size);
+  height: var(--bottle-size);
   border: 0;
   padding: 0;
   border-radius: 0;
-  background: url("./assets/images/events/BottleMail.webp") center / contain no-repeat;
+  background: url("./assets/images/events/BottleMail_vo2.webp") center / contain no-repeat;
   filter:
-    drop-shadow(0 6px 5px rgba(15, 34, 26, 0.26))
-    drop-shadow(0 16px 10px rgba(19, 56, 67, 0.16));
+    drop-shadow(0 1px 1px rgba(15, 34, 26, 0.2))
+    drop-shadow(0 3px 3px rgba(19, 56, 67, 0.14));
   opacity: 0;
   pointer-events: auto;
   cursor: pointer;
-  transform: translate(-50%, -50%) rotate(var(--bottle-start-tilt)) scale(0.84);
-  transform-origin: 52% 54%;
+  transform: translate(-50%, -100%) rotate(var(--bottle-start-tilt)) scale(0.54);
+  transform-origin: 50% 100%;
   animation: bottleDrift var(--bottle-duration) cubic-bezier(0.34, 0.02, 0.22, 1) forwards;
 }
 
@@ -545,10 +547,10 @@ body.camera-intro .forest-scene {
 }
 
 .bottle-mail::before {
-  right: 14%;
-  top: 20%;
-  width: 22px;
-  height: 18px;
+  right: 13%;
+  top: 19%;
+  width: 16%;
+  height: 13%;
   border-radius: 42% 50% 46% 44%;
   background:
     radial-gradient(circle at 36% 34%, rgba(131, 84, 44, 0.32), transparent 24%),
@@ -558,13 +560,17 @@ body.camera-intro .forest-scene {
 }
 
 .bottle-mail::after {
-  inset: 38% 14% 19% 16%;
-  border-radius: 999px;
+  left: -46%;
+  right: -46%;
+  bottom: -4%;
+  z-index: 1;
+  height: 58%;
+  border-radius: 999px 999px 46% 46%;
   background:
-    radial-gradient(ellipse at 50% 56%, rgba(214, 247, 255, 0.24), transparent 62%),
-    linear-gradient(90deg, transparent 8%, rgba(255, 247, 203, 0.16) 42%, transparent 78%);
+    radial-gradient(ellipse at 48% 10%, rgba(244, 255, 255, 0.48), transparent 30%),
+    linear-gradient(180deg, rgba(128, 225, 235, 0.44), rgba(31, 119, 142, 0.24) 60%, transparent 100%);
   mix-blend-mode: screen;
-  opacity: 0.32;
+  opacity: 0.68;
 }
 
 .bottle-mail:focus-visible {
@@ -595,11 +601,14 @@ body.camera-intro .forest-scene {
 }
 
 .forest-time--night .bottle-mail::after {
-  inset: 37% 13% 18% 15%;
+  left: -46%;
+  right: -46%;
+  bottom: -4%;
+  height: 58%;
   background:
-    radial-gradient(ellipse at 48% 56%, rgba(187, 239, 255, 0.28), transparent 62%),
-    linear-gradient(90deg, transparent 6%, rgba(255, 235, 166, 0.2) 42%, transparent 76%);
-  opacity: 0.44;
+    radial-gradient(ellipse at 48% 14%, rgba(217, 250, 255, 0.48), transparent 30%),
+    linear-gradient(180deg, rgba(134, 229, 244, 0.42), rgba(32, 122, 151, 0.22) 58%, transparent 100%);
+  opacity: 0.62;
   animation: bottleNightGlow 2.8s ease-in-out infinite;
 }
 
@@ -1761,67 +1770,68 @@ body.debug-panel-hidden .debug-panel {
 
 @keyframes bottleDrift {
   0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) rotate(var(--bottle-start-tilt)) scale(0.76);
+    opacity: 0.18;
+    transform: translate(-50%, -100%) rotate(var(--bottle-start-tilt)) scale(0.54);
   }
 
   12% {
-    opacity: 0.72;
+    opacity: 0.36;
   }
 
   34% {
-    transform: translate(calc(-50% + var(--bottle-early-x) + 3px), calc(-50% + var(--bottle-early-y) - 5px)) rotate(var(--bottle-mid-tilt)) scale(0.9);
+    opacity: 0.58;
+    transform: translate(calc(-50% + var(--bottle-early-x)), calc(-100% + var(--bottle-early-y) - 2px)) rotate(var(--bottle-mid-tilt)) scale(0.72);
   }
 
   62% {
-    opacity: 0.86;
-    transform: translate(calc(-50% + var(--bottle-mid-x)), calc(-50% + var(--bottle-mid-y))) rotate(var(--bottle-mid-tilt)) scale(1);
+    opacity: 0.76;
+    transform: translate(calc(-50% + var(--bottle-mid-x)), calc(-100% + var(--bottle-mid-y) + 1px)) rotate(var(--bottle-mid-tilt)) scale(0.88);
   }
 
   90% {
-    opacity: 0.9;
-    transform: translate(calc(-50% + var(--bottle-end-x) - 6px), calc(-50% + var(--bottle-end-y) - 4px)) rotate(calc(var(--bottle-end-tilt) - 4deg)) scale(1.01);
+    opacity: 0.88;
+    transform: translate(calc(-50% + var(--bottle-end-x) - 2px), calc(-100% + var(--bottle-end-y) - 2px)) rotate(calc(var(--bottle-end-tilt) - 2deg)) scale(0.98);
   }
 
   100% {
     opacity: 0.9;
-    transform: translate(calc(-50% + var(--bottle-end-x)), calc(-50% + var(--bottle-end-y))) rotate(var(--bottle-end-tilt)) scale(1);
+    transform: translate(calc(-50% + var(--bottle-end-x)), calc(-100% + var(--bottle-end-y))) rotate(var(--bottle-end-tilt)) scale(1);
   }
 }
 
 @keyframes bottleArrived {
   0%,
   100% {
-    transform: translate(calc(-50% + var(--bottle-end-x)), calc(-50% + var(--bottle-end-y))) rotate(var(--bottle-end-tilt)) scale(1);
+    transform: translate(calc(-50% + var(--bottle-end-x)), calc(-100% + var(--bottle-end-y))) rotate(var(--bottle-end-tilt)) scale(1);
   }
 
   28% {
-    transform: translate(calc(-50% + var(--bottle-end-x) - 3px), calc(-50% + var(--bottle-end-y) - 5px)) rotate(calc(var(--bottle-end-tilt) - 1.5deg)) scale(1.005);
+    transform: translate(calc(-50% + var(--bottle-end-x) - 2px), calc(-100% + var(--bottle-end-y) - 3px)) rotate(calc(var(--bottle-end-tilt) - 1.2deg)) scale(1.005);
   }
 
   50% {
-    transform: translate(calc(-50% + var(--bottle-end-x) + 4px), calc(-50% + var(--bottle-end-y) - 3px)) rotate(calc(var(--bottle-end-tilt) + 1.5deg)) scale(1.008);
+    transform: translate(calc(-50% + var(--bottle-end-x) + 2px), calc(-100% + var(--bottle-end-y) - 1px)) rotate(calc(var(--bottle-end-tilt) + 1.2deg)) scale(1.008);
   }
 
   74% {
-    transform: translate(calc(-50% + var(--bottle-end-x) + 2px), calc(-50% + var(--bottle-end-y) + 2px)) rotate(calc(var(--bottle-end-tilt) + 0.5deg)) scale(1);
+    transform: translate(calc(-50% + var(--bottle-end-x) + 1px), calc(-100% + var(--bottle-end-y) + 1px)) rotate(calc(var(--bottle-end-tilt) + 0.4deg)) scale(1);
   }
 }
 
 @keyframes bottleOpen {
   0% {
     opacity: 0.92;
-    transform: translate(calc(-50% + var(--bottle-end-x)), calc(-50% + var(--bottle-end-y))) rotate(var(--bottle-end-tilt)) scale(1);
+    transform: translate(calc(-50% + var(--bottle-end-x)), calc(-100% + var(--bottle-end-y))) rotate(var(--bottle-end-tilt)) scale(1);
   }
 
   42% {
     opacity: 1;
-    transform: translate(calc(-50% + var(--bottle-end-x)), calc(-50% + var(--bottle-end-y) - 12px)) rotate(calc(var(--bottle-end-tilt) + 9deg)) scale(1.08);
+    transform: translate(calc(-50% + var(--bottle-end-x)), calc(-100% + var(--bottle-end-y) - 12px)) rotate(calc(var(--bottle-end-tilt) + 9deg)) scale(1.08);
   }
 
   100% {
     opacity: 0;
-    transform: translate(calc(-50% + var(--bottle-end-x)), calc(-50% + var(--bottle-end-y) - 22px)) rotate(calc(var(--bottle-end-tilt) + 18deg)) scale(0.84);
+    transform: translate(calc(-50% + var(--bottle-end-x)), calc(-100% + var(--bottle-end-y) - 22px)) rotate(calc(var(--bottle-end-tilt) + 18deg)) scale(0.84);
   }
 }
 

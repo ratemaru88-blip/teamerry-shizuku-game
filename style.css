@@ -306,9 +306,9 @@ body {
 .bottom-ui{
   position: absolute;
   left: 50%;
-  bottom: 0.5%;
+  bottom: 4px;
   transform: translateX(-50%);
-  width: 88%;
+  width: 82%;
 
   display: flex;
   justify-content: space-between;
@@ -317,7 +317,7 @@ body {
   z-index: 50;
 }
 
-.reset-btn, .help-btn, .bonus-test-btn {
+.reset-btn, .help-btn {
   padding: 6px 12px;
   border-radius: 999px;
   border: none;
@@ -337,27 +337,25 @@ body {
   color: #4c5a45;
   
 }
-.bonus-test-btn {
-  display: none;
-  min-width: 74px;
-  height: 34px;
-  padding: 0 12px;
-  background: #f6d24f;
-  color: #4b3513;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-}
-.reset-btn:active, .help-btn:active, .bonus-test-btn:active {
+.reset-btn:active, .help-btn:active {
   transform: translateY(1px);
   box-shadow: 0 3px 8px rgba(0,0,0,0.30);
 }
 
-@media (max-width: 768px) {
-  .bonus-test-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+@media (max-width: 700px){
+  .cup-line{
+    bottom: 42px;
+    height: 28px;
   }
+
+  .cup-handle{
+    bottom: 50px;
+  }
+
+  .cup-shadow{
+    bottom: 36px;
+  }
+
 }
 
 /* =======================
@@ -537,6 +535,16 @@ body {
   pointer-events: none;
 }
 
+@media (max-width: 700px){
+  .bottom-ui{
+    bottom: 5px;
+    width: 76%;
+  }
+
+  .image-btn img{
+    width: clamp(58px, 24vw, 96px);
+  }
+}
 
 .help-overlay{
   z-index: 120;

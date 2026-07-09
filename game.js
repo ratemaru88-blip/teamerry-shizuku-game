@@ -12,7 +12,6 @@
   const overlayRestartBtnEl = document.getElementById("overlayRestartBtn");
   const resetBtnEl = document.getElementById("resetBtn");
   const helpBtnEl = document.getElementById("helpBtn");
-  const bonusTestBtnEl = document.getElementById("bonusTestBtn");
   const helpOverlayEl = document.getElementById("helpOverlay");
   const helpCloseBtnEl = document.getElementById("helpCloseBtn");
 
@@ -184,16 +183,6 @@
     }, 150);
   }
 
-  function startBonusTest() {
-    const state = dropletEngine.getState();
-    if (state.gameOver || bonusActive) return;
-
-    handleLargeMerge({
-      charIndex:
-        typeof state.nextCharIndex === "number" ? state.nextCharIndex : 0,
-    });
-  }
-
   const dropletEngine = window.createDropletEngine({
     canvas,
     leafWrapperEl,
@@ -215,7 +204,13 @@
     if (e.key.toLowerCase() !== "b") return;
     if (e.repeat) return;
 
-    startBonusTest();
+    const state = dropletEngine.getState();
+    if (state.gameOver || bonusActive) return;
+
+    handleLargeMerge({
+      charIndex:
+        typeof state.nextCharIndex === "number" ? state.nextCharIndex : 0,
+    });
   });
 
   const { Bodies, Body, World, Events, Constraint } = window.Matter;
@@ -223,9 +218,6 @@
 
   if (helpBtnEl) {
     helpBtnEl.addEventListener("click", openHelp);
-  }
-  if (bonusTestBtnEl) {
-    bonusTestBtnEl.addEventListener("click", startBonusTest);
   }
   if (helpCloseBtnEl) {
     helpCloseBtnEl.addEventListener("click", closeHelp);

@@ -272,10 +272,15 @@
   };
 
   function getAntGroundBottom(offset = 0) {
+    const viewportWidth =
+      window.visualViewport?.width || window.innerWidth || document.documentElement.clientWidth || 0;
     const isMobile =
-      typeof window.matchMedia === "function" &&
-      window.matchMedia("(max-width: 700px)").matches;
-    return (isMobile ? 58 : ANT_CFG.yBottomPx) + offset;
+      viewportWidth <= 900 ||
+      window.screen?.width <= 900 ||
+      navigator.maxTouchPoints > 0 ||
+      (typeof window.matchMedia === "function" &&
+        window.matchMedia("(pointer: coarse)").matches);
+    return (isMobile ? 46 : ANT_CFG.yBottomPx) + offset;
   }
 
   function getAntTargetCount() {

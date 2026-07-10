@@ -522,11 +522,11 @@ body {
 @media (max-width: 700px){
   .bottom-ui{
     bottom: 5px;
-    width: 76%;
+    width: 82%;
   }
 
   .image-btn img{
-    width: clamp(58px, 24vw, 96px);
+    width: clamp(82px, 28vw, 106px);
   }
 }
 

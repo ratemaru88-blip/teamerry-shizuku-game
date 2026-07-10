@@ -271,6 +271,13 @@
     tankerSoundInterval: 900,
   };
 
+  function getAntGroundBottom(offset = 0) {
+    const isMobile =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(max-width: 700px)").matches;
+    return (isMobile ? 58 : ANT_CFG.yBottomPx) + offset;
+  }
+
   function getAntTargetCount() {
     return (
       ANT_CFG.minCount +
@@ -305,7 +312,7 @@
       fromLeft,
       x: startX,
       speed,
-      yBottom: ANT_CFG.yBottomPx + Math.random() * 2,
+      yBottom: getAntGroundBottom(Math.random() * 2),
       frame: 0,
       lastFrameAt: performance.now(),
       frameInterval: 120,
@@ -348,7 +355,7 @@
       x: startX,
       targetX: stopX,
       speed: fromLeft ? ANT_CFG.rescueRunSpeed : -ANT_CFG.rescueRunSpeed,
-      yBottom: ANT_CFG.yBottomPx,
+      yBottom: getAntGroundBottom(),
       frame: 0,
       lastFrameAt: performance.now(),
       frameInterval: 90,
@@ -660,7 +667,7 @@
     wrap.className = "ant-tanker-wrap";
     wrap.style.position = "absolute";
     wrap.style.left = "0px";
-    wrap.style.bottom = `${ANT_CFG.yBottomPx - 2}px`;
+    wrap.style.bottom = `${getAntGroundBottom(-2)}px`;
     wrap.style.width = `${ANT_CFG.tankerWidth}px`;
     wrap.style.height = `${ANT_CFG.tankerHeight}px`;
     wrap.style.pointerEvents = "none";
@@ -741,7 +748,7 @@
       fromLeft,
       x: startX,
       targetX,
-      yBottom: ANT_CFG.yBottomPx - 2,
+      yBottom: getAntGroundBottom(-2),
       width: ANT_CFG.tankerWidth,
       height: ANT_CFG.tankerHeight,
       speed: ANT_CFG.tankerRunSpeed * direction,

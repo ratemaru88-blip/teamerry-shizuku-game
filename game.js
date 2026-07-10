@@ -288,10 +288,10 @@
 
     if (playRect?.height && lineRect?.height) {
       const lineTopFromBottom = playRect.bottom - lineRect.top;
-      return Math.max(0, lineTopFromBottom + 18 + offset);
+      return Math.max(0, lineTopFromBottom + 4 + offset);
     }
 
-    return 92 + offset;
+    return 78 + offset;
   }
 
   function getAntTargetCount() {

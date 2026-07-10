@@ -183,6 +183,21 @@
     }, 150);
   }
 
+  function isMobileGameLayout() {
+    const viewportWidth =
+      window.visualViewport?.width ||
+      window.innerWidth ||
+      document.documentElement.clientWidth ||
+      0;
+    return (
+      viewportWidth <= 900 ||
+      window.screen?.width <= 900 ||
+      navigator.maxTouchPoints > 0 ||
+      (typeof window.matchMedia === "function" &&
+        window.matchMedia("(pointer: coarse)").matches)
+    );
+  }
+
   const dropletEngine = window.createDropletEngine({
     canvas,
     leafWrapperEl,
@@ -193,6 +208,7 @@
     finalScoreTextEl,
     overlayRestartBtnEl,
     resetBtnEl,
+    cupLineBottomPx: isMobileGameLayout() ? 42 : 50,
     onScoreChange: handleScoreChange,
     onGameOver: handleGameOver,
     onLargeMerge: handleLargeMerge,
@@ -272,15 +288,7 @@
   };
 
   function getAntGroundBottom(offset = 0) {
-    const viewportWidth =
-      window.visualViewport?.width || window.innerWidth || document.documentElement.clientWidth || 0;
-    const isMobile =
-      viewportWidth <= 900 ||
-      window.screen?.width <= 900 ||
-      navigator.maxTouchPoints > 0 ||
-      (typeof window.matchMedia === "function" &&
-        window.matchMedia("(pointer: coarse)").matches);
-    return (isMobile ? 46 : ANT_CFG.yBottomPx) + offset;
+    return (isMobileGameLayout() ? 38 : ANT_CFG.yBottomPx) + offset;
   }
 
   function getAntTargetCount() {

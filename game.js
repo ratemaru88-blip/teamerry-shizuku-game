@@ -288,7 +288,7 @@
 
     if (playRect?.height && lineRect?.height) {
       const lineTopFromBottom = playRect.bottom - lineRect.top;
-      return Math.max(0, lineTopFromBottom + offset);
+      return Math.max(0, lineTopFromBottom - 3 + offset);
     }
 
     return 78 + offset;

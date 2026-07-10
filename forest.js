@@ -47,6 +47,7 @@
     day: {
       label: "昼",
       src: "./assets/backgrounds/forest_day_v02.webm",
+      pcSrc: "./assets/backgrounds/observatory_day_pc_v02.webm",
     },
     "evening-a": {
       label: "夕方前",
@@ -67,6 +68,8 @@
     height: 1080,
   };
   let stageScale = 1;
+
+  const isPcMode = () => isFinePointer && !isCoarsePointer;
 
   const getViewportSize = () => {
     const rect = viewport ? viewport.getBoundingClientRect() : { width: window.innerWidth, height: window.innerHeight };
@@ -461,9 +464,12 @@
       return;
     }
 
+    const src = slot.pcSrc && isPcMode() ? slot.pcSrc : slot.src;
+    const fallbackSrc = slot.src;
+
     const visibleVideo = forestBgVideos[visibleBackgroundIndex] || forestBgVideos[0];
 
-    if (visibleVideo && visibleVideo.dataset.currentSrc === slot.src) {
+    if (visibleVideo && visibleVideo.dataset.currentSrc === src) {
       playBackgroundVideo(visibleVideo);
       return;
     }
@@ -477,9 +483,17 @@
       return;
     }
 
-    if (nextVideo.dataset.currentSrc !== slot.src) {
-      nextVideo.dataset.currentSrc = slot.src;
-      nextVideo.src = slot.src;
+    if (nextVideo.dataset.currentSrc !== src) {
+      nextVideo.dataset.currentSrc = src;
+      nextVideo.onerror = () => {
+        if (fallbackSrc && fallbackSrc !== src && nextVideo.dataset.currentSrc === src) {
+          nextVideo.dataset.currentSrc = fallbackSrc;
+          nextVideo.src = fallbackSrc;
+          nextVideo.load();
+          playBackgroundVideo(nextVideo);
+        }
+      };
+      nextVideo.src = src;
       nextVideo.load();
     }
 

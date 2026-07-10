@@ -521,13 +521,14 @@ body.camera-intro .forest-scene {
   left: var(--bottle-start-x);
   top: var(--bottle-start-y);
   --bottle-size: clamp(23px, 1.43vw, 29px);
+  --bottle-hit-size: max(48px, calc(var(--bottle-size) * 1.9));
   z-index: 1;
-  width: var(--bottle-size);
-  height: var(--bottle-size);
+  width: var(--bottle-hit-size);
+  height: var(--bottle-hit-size);
   border: 0;
   padding: 0;
   border-radius: 0;
-  background: url("./assets/images/events/BottleMail_vo2.webp") center / contain no-repeat;
+  background: url("./assets/images/events/BottleMail_vo2.webp") center / var(--bottle-size) var(--bottle-size) no-repeat;
   filter:
     drop-shadow(0 1px 1px rgba(15, 34, 26, 0.2))
     drop-shadow(0 3px 3px rgba(19, 56, 67, 0.14));
@@ -560,10 +561,10 @@ body.camera-intro .forest-scene {
 }
 
 .bottle-mail::after {
-  left: -46%;
-  right: -46%;
-  bottom: -4%;
+  left: 50%;
+  bottom: 18%;
   z-index: 1;
+  width: calc(var(--bottle-size) * 1.9);
   height: 58%;
   border-radius: 999px 999px 46% 46%;
   background:
@@ -571,6 +572,7 @@ body.camera-intro .forest-scene {
     linear-gradient(180deg, rgba(128, 225, 235, 0.44), rgba(31, 119, 142, 0.24) 60%, transparent 100%);
   mix-blend-mode: screen;
   opacity: 0.68;
+  transform: translateX(-50%);
 }
 
 .bottle-mail:focus-visible {

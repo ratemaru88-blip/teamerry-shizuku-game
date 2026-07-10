@@ -342,25 +342,6 @@ body {
   box-shadow: 0 3px 8px rgba(0,0,0,0.30);
 }
 
-@media (max-width: 700px){
-  .cup-line{
-    bottom: 28px;
-    height: 28px;
-    z-index: 8;
-  }
-
-  .cup-handle{
-    bottom: 36px;
-    z-index: 9;
-  }
-
-  .cup-shadow{
-    bottom: 22px;
-    z-index: 7;
-  }
-
-}
-
 /* =======================
    オーバーレイ
 ======================= */

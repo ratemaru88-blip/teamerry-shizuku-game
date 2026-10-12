@@ -1,5 +1,7 @@
 (() => {
   "use strict";
+  const { setTimeout, clearTimeout, setInterval, clearInterval,
+    requestAnimationFrame, cancelAnimationFrame, Audio, performance } = window.ShizukuLifecycle;
 
   if (!window.Matter) {
     console.error("[droplet-engine] Matter.js が読み込まれていません");
@@ -652,10 +654,12 @@
       let downY = 0;
 
       const DRAG_THRESHOLD = 4;
+      resetInput = () => { pointerActive = false; pointerMoved = false; };
 
       target.addEventListener(
         "pointerdown",
         (e) => {
+          if (!window.ShizukuLifecycle.isRunning()) return;
           unlockAudioOnce();
 
           pointerActive = true;
@@ -671,6 +675,7 @@
       window.addEventListener(
         "pointermove",
         (e) => {
+          if (!window.ShizukuLifecycle.isRunning()) return;
           if (!pointerActive) return;
 
           const dx = e.clientX - downX;
@@ -688,6 +693,7 @@
       window.addEventListener(
         "pointerup",
         (e) => {
+          if (!window.ShizukuLifecycle.isRunning()) { resetInput(); return; }
           if (!pointerActive) return;
 
           pointerActive = false;
@@ -713,6 +719,7 @@
       window.addEventListener(
         "pointerup",
         (e) => {
+          if (!window.ShizukuLifecycle.isRunning()) { resetInput(); return; }
           if (!pointerActive) return;
 
           pointerActive = false;
@@ -778,7 +785,11 @@
       if (cnt >= DROPLET_GAMEOVER_COUNT) setGameOver();
     });
 
+    let started = false;
+    let resetInput = () => {};
     function start() {
+      if (started) return;
+      started = true;
       createBounds();
       Render.run(render);
       Runner.run(runner, engine);
@@ -807,6 +818,20 @@
       start,
       resetGame,
       destroy,
+      pause() {
+        resetInput();
+        Runner.stop(runner);
+        Render.stop(render);
+      },
+      stop() {
+        this.pause();
+        cancelAnimationFrame(tiltRAF);
+        tiltRAF = 0;
+      },
+      resume(runPhysics = true) {
+        Render.run(render);
+        if (runPhysics) Runner.run(runner, engine);
+      },
 
       getState() {
         return {

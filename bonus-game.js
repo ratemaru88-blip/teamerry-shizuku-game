@@ -1,5 +1,7 @@
 (() => {
   'use strict';
+  const { setTimeout, clearTimeout, setInterval, clearInterval,
+    requestAnimationFrame, cancelAnimationFrame, Audio, performance } = window.ShizukuLifecycle;
 
   /* =====================================================
      画像パス（charIndex 順 = dropletTypes と同じ順番）
@@ -61,7 +63,7 @@
   }
   function playSndClone(key, vol) {
     const s = SND[key]; if (!s) return;
-    const c = s.cloneNode(true);
+    const c = window.ShizukuLifecycle.trackAudio(s.cloneNode(true));
     if (typeof vol === 'number') c.volume = vol;
     try { c.play(); } catch (_) {}
   }
@@ -886,7 +888,8 @@
       phaseCharPopup();
       return true;
     },
-    stop() {
+    stop(notify = true) {
+      if (!notify) _onFinish = null;
       _finish(0);
     },
     isRunning() { return _phase !== 'idle'; },

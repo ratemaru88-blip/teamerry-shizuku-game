@@ -464,6 +464,9 @@ body {
 .simple-gauge-fill{ position:absolute; inset:0; z-index:1; }
 .gauge-forest{ position:absolute; inset:0; z-index:2; pointer-events:none; }
 .gauge-text{ position:absolute; inset:0; z-index:3; justify-content:flex-start; padding-left:14px; }
+/* Forest gauge is on hold. Keep score text and all layout boxes in place. */
+.top-bar .gauge-forest,
+.top-bar .simple-gauge-fill { visibility: hidden; }
 /* 念のため：旧スコア行を完全に無効化 */
 .score-row .score-text,
 .score-row > .score-text,

@@ -10,6 +10,85 @@
 
   const { Engine, Render, Runner, World, Bodies, Body, Events } = window.Matter;
 
+  // Protect this game's Canvas only; Matter's renderer and physics stay unchanged.
+  function protectSpriteRendering(render) {
+    const context = render.context;
+    const drawImage = context.drawImage;
+    const images = new WeakMap();
+
+    function track(image) {
+      if (images.has(image)) return images.get(image);
+      const state = { status: "loading" };
+      images.set(image, state);
+
+      function fail(error) {
+        if (state.status === "failed") return;
+        state.status = "failed";
+        console.warn("[shizuku-render] Image skipped", image.currentSrc || image.src, error);
+      }
+
+      function loaded() {
+        if (state.status !== "loading") return;
+        if (!image.naturalWidth || !image.naturalHeight) {
+          fail(new Error("Image has no decoded dimensions"));
+          return;
+        }
+        state.status = "decoding";
+        Promise.resolve()
+          .then(() => typeof image.decode === "function" ? image.decode() : undefined)
+          .then(() => {
+            if (state.status === "failed") return;
+            if (image.complete && image.naturalWidth && image.naturalHeight) {
+              state.status = "ready";
+            } else {
+              fail(new Error("Image is not drawable after decode"));
+            }
+          }, fail);
+      }
+
+      state.fail = fail;
+      image.addEventListener("load", loaded, { once: true });
+      image.addEventListener("error", fail, { once: true });
+      if (image.complete && image.src) loaded();
+      return state;
+    }
+
+    context.drawImage = function (image, ...args) {
+      const state = image instanceof window.HTMLImageElement ? track(image) : null;
+      if (state && state.status !== "ready") return;
+
+      // Return normally on image failure so Matter also undoes its outer
+      // translate/rotate and continues drawing the remaining bodies.
+      this.save();
+      try {
+        return drawImage.call(this, image, ...args);
+      } catch (error) {
+        if (!state) throw error;
+        state.fail(error);
+      } finally {
+        this.restore();
+      }
+    };
+
+    Events.on(render, "beforeRender", () => {
+      context.setTransform(1, 0, 0, 1, 0, 0);
+      context.globalAlpha = 1;
+      context.globalCompositeOperation = "source-over";
+    });
+
+    return function prepareTexture(url) {
+      let image = render.textures[url];
+      if (!image) {
+        image = new Image();
+        render.textures[url] = image;
+        track(image);
+        image.src = url;
+      } else {
+        track(image);
+      }
+    };
+  }
+
   window.createDropletEngine = function createDropletEngine(options) {
     const cfg = {
       worldWidth: 360,
@@ -37,6 +116,7 @@
     };
 
     const canvas = cfg.canvas;
+    const cupLineEl = cfg.cupLineEl || null;
     const leafWrapperEl = cfg.leafWrapperEl;
     const previewDropletEl = cfg.previewDropletEl;
     const cupHandleEl = cfg.cupHandleEl || null;
@@ -148,6 +228,7 @@
       },
     });
 
+    const prepareTexture = protectSpriteRendering(render);
     const runner = Runner.create();
 
     const droplets = new Set();
@@ -164,8 +245,13 @@
     let moveTiltDeg = 0;
     let tiltRAF = 0;
 
-    const CUP_RIM_Y =
+    let cupRimY =
       cfg.worldHeight - cfg.cupLineBottomPx - cfg.cupLineHeightPx * 0.3;
+    let rimFloor = null;
+    let rimImageTopRatio = 0;
+    let rimSurface = null;
+    let rimObserver = null;
+    let disposed = false;
 
     const DROPLET_GAMEOVER_Y = cfg.worldHeight * cfg.topSensorYRatio;
     const DROPLET_GAMEOVER_COUNT = 8;
@@ -322,10 +408,99 @@
       requestAnimationFrame(step);
     }
 
+    function moveSupportedDroplets(deltaY) {
+      // Move the floor's contact-connected stack with it on resize. Airborne
+      // bodies keep their position and all bodies keep their velocity/identity.
+      const supported = new Set([rimFloor]);
+      const live = new Set(world.bodies);
+      let changed;
+      do {
+        changed = false;
+        for (const pair of engine.pairs.list) {
+          if (!pair.isActive || pair.isSensor) continue;
+          const a = pair.bodyA.parent, b = pair.bodyB.parent;
+          for (const [base, body] of [[a, b], [b, a]]) {
+            if (!supported.has(base) || supported.has(body) || !live.has(body)) continue;
+            if (body.isStatic || body.isSensor || !(body.isDroplet || body.isObstacleLeaf)) continue;
+            supported.add(body);
+            changed = true;
+          }
+        }
+      } while (changed);
+      supported.delete(rimFloor);
+      supported.forEach(body => Body.translate(body, { x: 0, y: deltaY }));
+    }
+
+    function syncCupRimToVisual() {
+      if (disposed || !rimFloor || !cupLineEl) return;
+      const canvasRect = canvas.getBoundingClientRect();
+      const lineRect = cupLineEl.getBoundingClientRect();
+      if (!(canvasRect.height > 0 && lineRect.height > 0)) return;
+
+      // The current CSS stretches maruta_A.png to 100% x 100%. Account for
+      // its transparent top rows instead of treating the element edge as wood.
+      const screenY = lineRect.top + lineRect.height * rimImageTopRatio;
+      const topY = (screenY - canvasRect.top) * cfg.worldHeight / canvasRect.height;
+      const centerY = topY + cfg.floorThickness / 2;
+      if (!Number.isFinite(centerY)) return;
+      const deltaY = centerY - cupRimY;
+      if (Math.abs(deltaY) > 0.0001) {
+        moveSupportedDroplets(deltaY);
+        Body.setPosition(rimFloor, { x: rimFloor.position.x, y: centerY });
+        cupRimY = centerY;
+      }
+      rimSurface = { screenY, topY, centerY: cupRimY, imageTopRatio: rimImageTopRatio };
+      Events.trigger(engine, "cupRimSync", { deltaY, ...rimSurface });
+      // A paused game also needs a fresh bitmap after its layout changes.
+      Render.world(render);
+    }
+
+    function bindCupRimSync() {
+      if (!cupLineEl) return;
+      syncCupRimToVisual();
+      window.addEventListener("resize", syncCupRimToVisual, { passive: true });
+      window.visualViewport?.addEventListener("resize", syncCupRimToVisual, { passive: true });
+      if (window.ResizeObserver) {
+        rimObserver = new window.ResizeObserver(syncCupRimToVisual);
+        rimObserver.observe(canvas);
+        rimObserver.observe(cupLineEl);
+      }
+
+      const match = getComputedStyle(cupLineEl).backgroundImage.match(/^url\((['"]?)(.*?)\1\)$/);
+      if (!match) return;
+      const image = new Image();
+      const loaded = typeof image.decode === "function" ? null : new Promise((resolve, reject) => {
+        image.onload = resolve;
+        image.onerror = reject;
+      });
+      image.src = match[2];
+      (loaded || image.decode()).then(() => {
+        if (disposed) return;
+        const probe = document.createElement("canvas");
+        probe.width = image.naturalWidth;
+        probe.height = image.naturalHeight;
+        const ctx = probe.getContext("2d", { willReadFrequently: true });
+        ctx.drawImage(image, 0, 0);
+        const pixels = ctx.getImageData(0, 0, probe.width, probe.height).data;
+        for (let y = 0; y < probe.height; y++) {
+          for (let x = 0; x < probe.width; x++) {
+            if (pixels[(y * probe.width + x) * 4 + 3] >= 16) {
+              rimImageTopRatio = y / probe.height;
+              syncCupRimToVisual();
+              return;
+            }
+          }
+        }
+      }).catch(error => {
+        // A missing/blocked image must never reset physics or game progress.
+        console.warn("[cup-rim] Using element top; image surface unavailable", error);
+      });
+    }
+
     function createBounds() {
-      const rimFloor = Bodies.rectangle(
+      rimFloor = Bodies.rectangle(
         (cfg.leftMargin + (cfg.worldWidth - cfg.rightMargin)) / 2,
-        CUP_RIM_Y,
+        cupRimY,
         cfg.worldWidth - cfg.leftMargin - cfg.rightMargin,
         cfg.floorThickness,
         { isStatic: true, render: { visible: false } }
@@ -791,6 +966,7 @@
       if (started) return;
       started = true;
       createBounds();
+      bindCupRimSync();
       Render.run(render);
       Runner.run(runner, engine);
       bindPlateControls();
@@ -808,6 +984,10 @@
     }
 
     function destroy() {
+      disposed = true;
+      rimObserver?.disconnect();
+      window.removeEventListener("resize", syncCupRimToVisual);
+      window.visualViewport?.removeEventListener("resize", syncCupRimToVisual);
       Runner.stop(runner);
       Render.stop(render);
       World.clear(world, false);
@@ -816,6 +996,7 @@
 
     return {
       start,
+      prepareTexture,
       resetGame,
       destroy,
       pause() {
@@ -829,6 +1010,7 @@
         tiltRAF = 0;
       },
       resume(runPhysics = true) {
+        syncCupRimToVisual();
         Render.run(render);
         if (runPhysics) Runner.run(runner, engine);
       },
@@ -909,7 +1091,9 @@
         runner,
         droplets,
         config: cfg,
-        cupRimY: CUP_RIM_Y,
+        get cupRimY() { return cupRimY; },
+        get cupRimSurface() { return rimSurface && { ...rimSurface }; },
+        syncCupRimToVisual,
       },
     };
   };

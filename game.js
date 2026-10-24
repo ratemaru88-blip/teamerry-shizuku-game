@@ -4,6 +4,7 @@
     requestAnimationFrame, cancelAnimationFrame, Audio, performance } = window.ShizukuLifecycle;
 
   const canvas = document.getElementById("gameCanvas");
+  const cupLineEl = document.getElementById("cupLine");
   const gameFrameEl = document.querySelector(".game-frame");
   const leafWrapperEl = document.getElementById("leafWrapper");
   const previewDropletEl = document.getElementById("previewDroplet");
@@ -200,6 +201,7 @@
 
   const dropletEngine = window.createDropletEngine({
     canvas,
+    cupLineEl,
     leafWrapperEl,
     previewDropletEl,
     cupHandleEl,
@@ -343,6 +345,7 @@
     ant.style.left = `${antObj.x}px`;
     ant.style.bottom = `${antObj.yBottom}px`;
 
+    antObj.groundOffset = antObj.yBottom - getAntGroundBottom();
     ants.add(antObj);
     return antObj;
   }
@@ -391,6 +394,7 @@
     ant.style.left = `${antObj.x}px`;
     ant.style.bottom = `${antObj.yBottom}px`;
 
+    antObj.groundOffset = antObj.yBottom - getAntGroundBottom();
     ants.add(antObj);
     mino.rescueAntIds?.add(antObj.id);
 
@@ -1277,9 +1281,13 @@
   ========================================================= */
 
   const BEE_TEX_L =
-    "https://static.wixstatic.com/media/e0436a_750ead96817a40618e8cf9aa30a07192~mv2.png";
+    "assets/images/bee.webp";
   const BEE_TEX_R =
-    "https://static.wixstatic.com/media/e0436a_810f0f4624bb4807bdc0a97652bf3d18~mv2.webp";
+    "assets/images/bee_R.webp";
+
+  // Warm the exact textures used by Matter; spawning/physics never wait on I/O.
+  dropletEngine.prepareTexture(BEE_TEX_L);
+  dropletEngine.prepareTexture(BEE_TEX_R);
 
   const beeSounds = {
     buzz: [new Audio("assets/sounds/buzz.mp3")],
@@ -1376,7 +1384,8 @@
     bee.willPass = Math.random() < BEE_CFG.passRate;
     bee.hasStung = false;
 
-    setSpriteScaleByPx(bee, BEE_CFG.sizePx);
+    // Both local originals are 256px wide; retain the configured visual width.
+    setSpriteScaleByPx(bee, BEE_CFG.sizePx, 256);
 
     const speedMag =
       Math.random() * (BEE_CFG.speedMax - BEE_CFG.speedMin) + BEE_CFG.speedMin;
@@ -2360,6 +2369,29 @@
   });
 
   startObstacleLeafLoop();
+
+  Events.on(dropletEngine.debug.engine, "cupRimSync", ({ deltaY }) => {
+    // DOM actors retain their existing artistic offsets, now refreshed when
+    // crossing PC/mobile layouts. Knocked-out minos follow the moving floor.
+    ants.forEach(ant => {
+      ant.yBottom = getAntGroundBottom(ant.groundOffset || 0);
+      ant.el.style.bottom = `${ant.yBottom}px`;
+    });
+    tankerRescues.forEach(obj => {
+      obj.yBottom = getAntGroundBottom(-2);
+      obj.el.style.bottom = `${obj.yBottom}px`;
+    });
+    minos.forEach(mino => {
+      if (mino.state !== "ko" || !Number.isFinite(deltaY)) return;
+      Body.translate(mino, { x: 0, y: deltaY });
+      if (mino._starEl) {
+        const p = getMinoStarAnchor(mino);
+        const screen = worldToOverlayPoint(p.x, p.y);
+        mino._starEl.style.left = `${screen.x}px`;
+        mino._starEl.style.top = `${screen.y}px`;
+      }
+    });
+  });
 
   /* =========================================================
      リセット補助

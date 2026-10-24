@@ -18,12 +18,15 @@
 
     function track(image) {
       if (images.has(image)) return images.get(image);
-      const state = { status: "loading" };
+      let settle;
+      const ready = new Promise(resolve => { settle = resolve; });
+      const state = { status: "loading", ready };
       images.set(image, state);
 
       function fail(error) {
         if (state.status === "failed") return;
         state.status = "failed";
+        settle(false);
         console.warn("[shizuku-render] Image skipped", image.currentSrc || image.src, error);
       }
 
@@ -40,6 +43,7 @@
             if (state.status === "failed") return;
             if (image.complete && image.naturalWidth && image.naturalHeight) {
               state.status = "ready";
+              settle(true);
             } else {
               fail(new Error("Image is not drawable after decode"));
             }
@@ -86,6 +90,7 @@
       } else {
         track(image);
       }
+      return track(image).ready;
     };
   }
 
@@ -233,6 +238,10 @@
 
     const droplets = new Set();
     const textureInfo = new Map();
+    const nextTextureQueue = [];
+    const queuedTextures = new Set();
+    let texturePreparationActive = false;
+    let texturePreparationTimer = 0;
 
     let score = 0;
     let nextCharIndex = 0;
@@ -309,6 +318,46 @@
       setHoldingDroplet(nextCharIndex);
     }
 
+    function queueNextMergeTexture(charIndex, stage, prioritize = false) {
+      const nextStage = cfg.stageKeys[stage + 1];
+      const url = nextStage && dropletTypes[charIndex]?.sprites[nextStage];
+      if (!url || disposed) return;
+      if (queuedTextures.has(url)) {
+        const index = nextTextureQueue.indexOf(url);
+        if (prioritize && index > 0) {
+          nextTextureQueue.splice(index, 1);
+          nextTextureQueue.unshift(url);
+        }
+        if (prioritize && index >= 0 && !texturePreparationActive) {
+          clearTimeout(texturePreparationTimer);
+          texturePreparationTimer = 0;
+          scheduleNextTexture();
+        }
+        return;
+      }
+      queuedTextures.add(url);
+      if (prioritize) nextTextureQueue.unshift(url);
+      else nextTextureQueue.push(url);
+      scheduleNextTexture();
+    }
+
+    function scheduleNextTexture() {
+      if (disposed || texturePreparationActive || texturePreparationTimer || !nextTextureQueue.length) return;
+      // Start the first request promptly, then yield between speculative jobs.
+      // Only one speculative image is loading/decoding at a time.
+      texturePreparationActive = true;
+      const url = nextTextureQueue.shift();
+      ensureTextureInfo(url);
+      prepareTexture(url).then(() => {
+        texturePreparationActive = false;
+        if (disposed || !nextTextureQueue.length) return;
+        texturePreparationTimer = setTimeout(() => {
+          texturePreparationTimer = 0;
+          scheduleNextTexture();
+        }, 0);
+      });
+    }
+
     function ensureTextureInfo(url) {
       if (!url) return null;
       const cached = textureInfo.get(url);
@@ -317,9 +366,23 @@
       const info = { w: 512, h: 512, ok: false, failed: false };
       textureInfo.set(url, info);
 
-      const img = new Image();
-
-      img.onload = () => {
+      // Share Matter's exact Image and readiness state, rather than loading a
+      // second Image for dimensions that may race the first visible frame.
+      prepareTexture(url).then(ready => {
+        if (disposed) return;
+        if (!ready) {
+          info.ok = false;
+          info.failed = true;
+          droplets.forEach((body) => {
+            if (body?.render?.sprite?.texture === url) {
+              body.render.sprite = undefined;
+              body.render.fillStyle = "#ffffff";
+              body.isTear = false;
+            }
+          });
+          return;
+        }
+        const img = render.textures[url];
         info.w = img.naturalWidth || 512;
         info.h = img.naturalHeight || 512;
         info.ok = true;
@@ -335,23 +398,7 @@
         if (holding && holding.texture === url && previewDropletEl) {
           previewDropletEl.src = url;
         }
-      };
-
-      img.onerror = () => {
-        info.ok = false;
-        info.failed = true;
-
-        droplets.forEach((body) => {
-          const tex = body?.render?.sprite?.texture;
-          if (tex === url) {
-            body.render.sprite = undefined;
-            body.render.fillStyle = "#ffffff";
-            body.isTear = false;
-          }
-        });
-      };
-
-      img.src = url;
+      });
       return info;
     }
 
@@ -360,6 +407,14 @@
       if (!sp || !sp.texture || !body.circleRadius) return;
 
       const info = ensureTextureInfo(sp.texture);
+      if (info?.failed) {
+        // Keep the existing white-circle image-error fallback for bodies
+        // created after a speculative request has already failed as well.
+        body.render.sprite = undefined;
+        body.render.fillStyle = "#ffffff";
+        body.isTear = false;
+        return;
+      }
       const baseW = info && info.w ? info.w : 512;
       const diameter = body.circleRadius * 2;
       const scale = (diameter / baseW) * cfg.visualScale;
@@ -596,6 +651,8 @@
 
       ensureTextureInfo(tex);
 
+      queueNextMergeTexture(charIndex, 0);
+
       holding = {
         charIndex,
         stage: 0,
@@ -650,6 +707,7 @@
       World.add(world, body);
 
       if (hasTex) applySpriteScale(body);
+      queueNextMergeTexture(charIndex, stage, true);
       return body;
     }
 
@@ -985,6 +1043,8 @@
 
     function destroy() {
       disposed = true;
+      clearTimeout(texturePreparationTimer);
+      nextTextureQueue.length = 0;
       rimObserver?.disconnect();
       window.removeEventListener("resize", syncCupRimToVisual);
       window.visualViewport?.removeEventListener("resize", syncCupRimToVisual);
